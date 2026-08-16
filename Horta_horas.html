@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#20242A">
+<title>Horas extra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-900:#20242A; --ink-800:#2B3138; --ink-700:#3A4149;
+    --paper-100:#E7EAE5; --paper-200:#DADED4; --paper-300:#C7CCC0;
+    --card:#F4F5F1;
+    --rust-500:#C9622B; --rust-600:#B3541F; --rust-700:#96461A;
+    --text:#1B1E1A; --muted:#6A716A;
+    --teal-500:#3E7C6B; --teal-700:#2A5A4D;
+    --coral-500:#C24B3D; --coral-700:#963A2F;
+    --blue-500:#3C6E9E; --blue-700:#2A4D70;
+    --violet-500:#7C5CB8; --violet-700:#5A4085;
+    --radius-sm:10px; --radius-md:16px; --radius-lg:22px;
+    --font-display:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace;
+    --font-body:'Inter',system-ui,-apple-system,sans-serif;
+    --shell-w:430px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body);background:#CBCFC4;color:var(--text);min-height:100vh;display:flex;justify-content:center;padding:0;}
+  #shell{width:100%;max-width:var(--shell-w);min-height:100vh;background:var(--paper-100);display:flex;flex-direction:column;position:relative;box-shadow:0 0 40px rgba(0,0,0,0.18);}
+
+  header.topbar{background:var(--ink-900);color:var(--paper-100);padding:22px 20px 18px;position:relative;overflow:hidden;}
+  header.topbar::after{content:"";position:absolute;right:-26px;top:-26px;width:120px;height:120px;border:1px dashed rgba(231,234,229,0.16);border-radius:50%;}
+  .topbar-eyebrow{font-family:var(--font-display);font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rust-500);margin:0 0 4px;}
+  .topbar-title{font-size:25px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .topbar-sub{font-size:15px;color:rgba(231,234,229,0.62);margin:4px 0 0;}
+
+  main{flex:1;padding:20px 18px 100px;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  h2.section-title{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin:0 0 10px;}
+
+  .date-card{background:var(--ink-900);color:var(--paper-100);border-radius:var(--radius-lg);padding:18px 18px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .date-nav-btn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(231,234,229,0.25);background:transparent;color:var(--paper-100);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .date-nav-btn:active{background:rgba(231,234,229,0.12);}
+  .date-center{text-align:center;position:relative;cursor:pointer;}
+  .date-pick-hint{font-size:12.5px;color:rgba(231,234,229,0.55);margin:6px 0 0;letter-spacing:0.02em;}
+  .date-input-hidden{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;border:none;padding:0;cursor:pointer;}
+  .date-dow{font-family:var(--font-display);font-size:13.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--rust-500);margin:0 0 3px;}
+  .date-num{font-family:var(--font-display);font-size:30px;font-weight:700;margin:0;}
+  .badge-hoy{display:inline-block;margin-top:7px;font-size:12.5px;letter-spacing:0.08em;text-transform:uppercase;background:var(--rust-500);color:var(--ink-900);padding:3px 10px;border-radius:20px;font-weight:700;}
+  .badge-jornada{display:inline-block;margin-top:7px;margin-left:6px;font-size:12.5px;letter-spacing:0.04em;background:rgba(231,234,229,0.14);color:var(--paper-100);padding:3px 10px;border-radius:20px;font-weight:600;font-family:var(--font-display);}
+
+  .tipo-dia-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .btn-fichar-salida{
+    display:block;width:46%;min-height:110px;margin:4px auto 10px;background:var(--rust-500);color:#fff;border:none;border-radius:var(--radius-lg);
+    padding:12px;font-size:23px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px rgba(201,98,43,0.35);
+  }
+  .btn-fichar-salida:active{background:var(--rust-600);}
+  .fichar-hint{font-size:14.5px;color:var(--muted);text-align:center;margin:0 0 14px;line-height:1.5;}
+  .btn-editar-toggle{
+    width:100%;background:transparent;border:none;color:var(--ink-700);font-size:15.5px;font-weight:600;
+    padding:11px 0;cursor:pointer;text-align:center;margin-bottom:8px;
+  }
+  .tipo-dia-btn{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-sm);padding:11px 4px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;}
+  .tipo-dia-btn.active{background:var(--ink-900);color:var(--paper-100);border-color:var(--ink-900);}
+  .tipo-dia-btn.active.vac{background:var(--teal-700);border-color:var(--teal-700);}
+  .tipo-dia-btn.active.med{background:var(--blue-700);border-color:var(--blue-700);}
+  .tipo-dia-btn.active.fest{background:var(--coral-700);border-color:var(--coral-700);}
+  .tipo-dia-btn.active.baja{background:var(--rust-700);border-color:var(--rust-700);}
+  .tipo-dia-btn.active.permiso{background:var(--violet-700);border-color:var(--violet-700);}
+  .tipo-dia-btn.active.huelga{background:var(--coral-700);border-color:var(--coral-700);}
+
+  .tramo-card{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;}
+  .tramo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .tramo-header span{font-family:var(--font-display);font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:700;}
+  .tramo-remove-x{background:transparent;border:none;color:var(--coral-700);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;}
+  .tramo-times{display:flex;gap:10px;}
+  .time-field{flex:1;}
+  .time-field label{display:block;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0 0 5px;}
+  .time-field input.time-input-picker{width:100%;border:1px solid var(--paper-300);background:var(--paper-100);border-radius:var(--radius-sm);padding:10px 8px;font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--ink-900);cursor:pointer;caret-color:transparent;}
+  .time-field-row{display:flex;gap:6px;align-items:stretch;}
+  .time-field-row input[type="time"]{flex:1;min-width:0;}
+  .btn-now{flex-shrink:0;background:var(--rust-500);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 14px;font-size:14px;font-weight:700;cursor:pointer;}
+  .btn-now:active{background:var(--rust-600);}
+  .btn-add-tramo-day{width:100%;background:transparent;border:1px dashed var(--paper-300);color:var(--ink-700);border-radius:var(--radius-sm);padding:12px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;}
+
+  .med-card{background:var(--card);border:1px solid var(--blue-500);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:14px;}
+  .med-card label.field-label{margin-top:10px;}
+  .med-card select, .med-card input[type="number"]{width:100%;border:1px solid var(--paper-300);background:var(--paper-100);border-radius:var(--radius-sm);padding:11px 8px;font-family:var(--font-body);font-size:16px;color:var(--text);}
+  .vac-card{background:var(--card);border:1px solid var(--teal-500);border-radius:var(--radius-md);padding:16px;margin-bottom:14px;text-align:center;color:var(--teal-700);font-size:15px;font-weight:600;}
+
+  .result-card{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px;}
+  .result-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;}
+  .result-row .lbl{font-size:14.5px;color:var(--muted);}
+  .result-row .val{font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--ink-900);}
+  .result-row.total{border-top:1px dashed var(--paper-300);margin-top:4px;padding-top:12px;}
+  .result-row.total .lbl{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;color:var(--text);}
+  .result-row.total .val{font-size:22px;font-weight:700;}
+  .val.positive{color:var(--rust-600);}
+  .val.negative{color:var(--coral-700);}
+  .val.neutral{color:var(--muted);}
+  .gauge{height:8px;border-radius:6px;background:var(--paper-300);overflow:hidden;position:relative;margin:10px 0 4px;}
+  .gauge-fill{height:100%;background:var(--teal-500);border-radius:6px 0 0 6px;}
+  .gauge-fill.over{background:var(--rust-500);}
+
+  label.field-label{display:block;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0 0 6px;}
+  .text-input{width:100%;border:1px solid var(--paper-300);background:var(--card);border-radius:var(--radius-sm);padding:11px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);}
+  .text-input:focus{outline:2px solid var(--rust-500);outline-offset:1px;}
+  .date-input{width:150px;font-family:var(--font-display);font-weight:600;text-align:right;color-scheme:light;}
+
+  .btn-primary{width:100%;background:var(--rust-500);color:#fff;border:none;border-radius:var(--radius-sm);padding:16px;font-size:17px;font-weight:700;margin-top:6px;cursor:pointer;}
+  .btn-primary:active{background:var(--rust-600);}
+  .btn-primary:disabled{background:var(--paper-300);color:var(--muted);}
+  .btn-secondary{width:100%;background:transparent;color:var(--ink-900);border:1px solid var(--paper-300);border-radius:var(--radius-sm);padding:14px;font-size:16px;font-weight:600;margin-top:10px;cursor:pointer;}
+  .btn-danger-text{width:100%;background:transparent;color:var(--coral-700);border:none;padding:13px;font-size:15px;font-weight:600;margin-top:4px;cursor:pointer;}
+
+  .time-picker-overlay{position:fixed;inset:0;background:rgba(27,30,26,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;}
+  .time-picker-sheet{background:var(--paper-100);width:100%;max-width:var(--shell-w);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));}
+  .time-picker-title{text-align:center;font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin:0 0 14px;}
+  .time-picker-wheels{display:flex;align-items:center;justify-content:center;gap:6px;position:relative;height:220px;}
+  .time-picker-wheels::before{content:'';position:absolute;top:88px;left:14%;right:14%;height:44px;background:rgba(201,98,43,0.10);border-top:1.5px solid var(--rust-500);border-bottom:1.5px solid var(--rust-500);border-radius:10px;pointer-events:none;z-index:0;}
+  .tp-col{width:76px;height:220px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;z-index:1;}
+  .tp-col::-webkit-scrollbar{display:none;}
+  .tp-col-pad{height:88px;}
+  .tp-item{height:44px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;font-family:var(--font-display);font-size:19px;font-weight:600;color:var(--paper-300);}
+  .tp-item.tp-selected{color:var(--ink-900);font-size:26px;font-weight:700;}
+  .tp-colon{font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--ink-900);z-index:1;}
+  .time-picker-actions{display:flex;gap:10px;margin-top:18px;}
+  .tp-btn{flex:1;padding:14px;border-radius:12px;font-size:15.5px;font-weight:700;cursor:pointer;border:none;}
+  .tp-btn.cancel{background:transparent;border:1px solid var(--paper-300);color:var(--ink-900);}
+  .tp-btn.ok{background:var(--rust-500);color:#fff;}
+  .toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink-900);color:var(--paper-100);padding:11px 18px;border-radius:30px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:50;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast .dot{width:7px;height:7px;border-radius:50%;background:var(--teal-500);}
+
+  .month-bar{background:var(--ink-900);border-radius:var(--radius-lg);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .month-label{color:var(--paper-100);font-weight:600;font-size:15px;text-transform:capitalize;}
+  .summary-row{display:flex;gap:10px;margin-bottom:16px;}
+  .stat-card{flex:1;background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-md);padding:12px 14px;}
+  .stat-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px;font-weight:600;}
+  .stat-value{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--ink-900);margin:0;}
+  .stat-value.positive{color:var(--rust-600);}
+  .stat-value.negative{color:var(--coral-700);}
+
+  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-dow-row span{text-align:center;font-family:var(--font-display);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px;}
+  .cal-cell{aspect-ratio:1/1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;background:var(--card);border:1.5px solid var(--paper-300);position:relative;padding-top:9px;}
+  .cal-cell.empty{visibility:hidden;cursor:default;}
+  .cal-cell.today{box-shadow:0 0 0 2px var(--rust-500);}
+  .cal-cell.future{opacity:0.35;cursor:default;}
+  .cal-cell.day-auto{border-style:dashed;}
+  .cal-cell.day-manual{border-style:solid;}
+  .cal-cell.nonwork-sat{background:rgba(60,110,158,0.08);border-style:dotted;}
+  .cal-cell.nonwork-rest{background:rgba(201,98,43,0.14);border-style:dotted;}
+  .cal-cell .cal-daynum{position:absolute;top:4px;left:6px;font-family:var(--font-display);font-size:9px;font-weight:700;color:var(--ink-700);}
+  .cal-cell .cal-delta{font-family:var(--font-display);font-size:17px;font-weight:700;line-height:1.1;}
+  .cal-cell .cal-delta.positive{color:var(--rust-600);}
+  .cal-cell .cal-delta.negative{color:var(--coral-700);}
+  .cal-cell .cal-delta.neutral{color:var(--muted);font-size:13px;font-weight:600;}
+  .cal-cell .cal-sublabel{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-top:1px;}
+  .cal-cell.vac .cal-delta, .cal-cell.med-propia .cal-delta, .cal-cell.med-acompanar .cal-delta, .cal-cell.baja .cal-delta, .cal-cell.permiso-si .cal-delta, .cal-cell.permiso-no .cal-delta{margin-top:7px;}
+  .cal-cell.vac{background:rgba(62,124,107,0.12);border-color:var(--teal-500);}
+  .cal-cell.vac .cal-delta{color:var(--teal-700);font-size:13px;}
+  .cal-cell.vac .cal-sublabel{color:var(--teal-700);}
+  .cal-cell.baja{background:rgba(150,70,26,0.12);border-color:var(--rust-700);}
+  .cal-cell.baja .cal-delta{color:var(--rust-700);font-size:13px;}
+  .cal-cell.baja .cal-sublabel{color:var(--rust-700);}
+  .cal-cell.permiso-si{background:rgba(124,92,184,0.10);border-color:var(--violet-700);}
+  .cal-cell.permiso-si .cal-delta{color:var(--violet-700);font-size:13px;}
+  .cal-cell.permiso-si .cal-sublabel{color:var(--violet-700);}
+  .cal-cell.permiso-no{background:rgba(150,70,26,0.06);border-color:var(--coral-700);}
+  .cal-cell.permiso-no .cal-delta{color:var(--coral-700);font-size:13px;}
+  .cal-cell.permiso-no .cal-sublabel{color:var(--coral-700);}
+  .cal-cell.med-propia{background:rgba(60,110,158,0.12);border-color:var(--blue-500);}
+  .cal-cell.med-propia .cal-delta.neutral{color:var(--blue-700);}
+  .cal-cell.med-acompanar{background:rgba(124,92,184,0.12);border-color:var(--violet-500);}
+  .cal-cell.med-acompanar .cal-delta.neutral{color:var(--violet-700);}
+  .ficha{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-md);margin-bottom:9px;overflow:hidden;cursor:pointer;padding:12px 14px;}
+  .ficha.vac{border-color:var(--teal-500);background:rgba(62,124,107,0.06);}
+  .ficha.med{border-color:var(--blue-500);background:rgba(60,110,158,0.06);}
+  .ficha-top{display:flex;align-items:center;justify-content:space-between;}
+  .ficha-date-inline{display:flex;align-items:baseline;gap:8px;}
+  .ficha-dow{font-family:var(--font-display);font-size:10px;color:var(--muted);text-transform:uppercase;}
+  .ficha-day{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink-900);}
+  .ficha-hours{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--ink-900);}
+  .ficha-delta{font-family:var(--font-display);font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .ficha-delta.positive{background:rgba(201,98,43,0.14);color:var(--rust-600);}
+  .ficha-delta.negative{background:rgba(194,75,61,0.12);color:var(--coral-700);}
+  .ficha-delta.neutral{background:var(--paper-200);color:var(--muted);}
+  .ficha-note{font-size:11.5px;color:var(--muted);margin:4px 0 0;}
+  .ficha-tag{font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:20px;margin-left:6px;}
+  .ficha-tag.vac{background:var(--teal-500);color:#fff;}
+  .ficha-tag.med{background:var(--blue-500);color:#fff;}
+  .ficha-tag.auto{background:var(--paper-300);color:var(--ink-700);}
+  .ficha-tag.manual{background:var(--rust-500);color:#fff;}
+
+  .print-bar{display:flex;gap:10px;margin-top:16px;}
+  .btn-outline-sm{flex:1;background:transparent;border:1px solid var(--ink-900);color:var(--ink-900);border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-outline-sm:disabled{border-color:var(--paper-300);color:var(--muted);cursor:not-allowed;background:var(--paper-200);}
+
+  .empty-state{text-align:center;padding:30px 16px;color:var(--muted);}
+  .empty-state p{margin:4px 0;font-size:13px;}
+  .empty-state .empty-icon{font-size:28px;margin-bottom:6px;}
+
+  .payslip{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-lg);overflow:hidden;}
+  .payslip-head{background:var(--ink-900);color:var(--paper-100);padding:16px 18px;}
+  .payslip-head-title{font-size:14px;font-weight:700;margin:0;}
+  .payslip-head-sub{font-size:12px;color:rgba(231,234,229,0.6);margin:3px 0 0;font-family:var(--font-display);}
+  .payslip-row{display:flex;justify-content:space-between;padding:11px 18px;border-bottom:1px dashed var(--paper-300);font-size:13.5px;}
+  .payslip-row .val{font-family:var(--font-display);font-weight:600;}
+  .payslip-row.section{background:var(--paper-100);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid var(--paper-300);}
+  .payslip-row.subtotal{background:var(--paper-100);font-weight:700;}
+  .payslip-row.total{background:var(--ink-900);color:var(--paper-100);font-weight:700;font-size:15px;border-bottom:none;}
+  .payslip-row.total .val{font-family:var(--font-display);color:var(--rust-500);font-size:17px;}
+  .payslip-row.deduct .val{color:var(--coral-700);}
+  .payslip-editable-row{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px dashed var(--paper-300);font-size:13.5px;background:rgba(201,98,43,0.05);}
+  .payslip-editable-row span{color:var(--text);}
+  .payslip-input{width:88px;text-align:right;border:1px solid var(--rust-500);background:#fff;border-radius:8px;padding:6px 8px;font-family:var(--font-display);font-size:13.5px;color:var(--rust-700);font-weight:600;}
+  .btn-revisada{width:100%;background:transparent;border:1.5px solid var(--paper-300);color:var(--muted);border-radius:var(--radius-sm);padding:13px;font-size:14px;font-weight:700;margin-top:10px;cursor:pointer;}
+  .btn-revisada.revisada{background:var(--teal-500);border-color:var(--teal-500);color:#fff;}
+
+  .settings-group{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;}
+  .settings-group h3{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:2px 0;}
+  .accordion-chevron{font-size:12px;color:var(--rust-500);flex-shrink:0;}
+  .settings-body{margin-top:12px;}
+  .field-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .field-row:last-child{margin-bottom:0;}
+  .field-row label{font-size:13.5px;color:var(--text);flex:1;}
+  .field-row input{width:120px;text-align:right;border:1px solid var(--paper-300);background:var(--paper-100);border-radius:var(--radius-sm);padding:9px 10px;font-family:var(--font-display);font-size:13.5px;color:var(--text);}
+  .field-hint{font-size:13px;color:var(--muted);margin:-8px 0 12px;}
+  .stub-note{display:flex;gap:10px;background:rgba(201,98,43,0.12);border:1px solid var(--rust-500);border-radius:var(--radius-md);padding:12px 14px;font-size:12.5px;color:var(--rust-700);margin-bottom:14px;line-height:1.5;}
+  .install-steps{font-size:12.5px;color:var(--muted);line-height:1.7;margin:0;padding-left:18px;}
+
+  .jornada-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .jornada-day{text-align:center;}
+  .jornada-day label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:5px;}
+  .jornada-day input{width:100%;text-align:center;border:1px solid var(--paper-300);background:var(--paper-100);border-radius:8px;padding:7px 2px;font-family:var(--font-display);font-size:12px;color:var(--text);}
+
+  .tarifa-card{background:var(--paper-100);border:1px solid var(--paper-300);border-radius:var(--radius-md);padding:14px 14px 4px;margin-bottom:12px;}
+  .tarifa-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--paper-300);}
+  .tarifa-vigencia label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0 0 5px;}
+  .tarifa-badge{font-size:10px;letter-spacing:0.07em;text-transform:uppercase;background:var(--teal-500);color:#EAF3EF;padding:4px 9px;border-radius:20px;font-weight:700;}
+  .tarifa-header-actions{display:flex;align-items:center;gap:10px;}
+  .tarifa-toggle{background:transparent;border:1px solid var(--paper-300);color:var(--ink-700);border-radius:8px;width:30px;height:30px;font-size:13px;cursor:pointer;flex-shrink:0;}
+  .tramo-remove{background:transparent;border:none;color:var(--coral-700);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;}
+  .btn-add-tramo{width:100%;background:transparent;border:1px dashed var(--paper-300);color:var(--ink-700);border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer;}
+  .cond-subhead{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin:12px 0 8px;}
+  .check-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-top:10px;}
+  .check-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--rust-500);flex-shrink:0;}
+  .add-row{display:flex;gap:8px;margin-bottom:12px;}
+  .add-row .text-input{flex:1;}
+  .btn-add-inline{flex-shrink:0;background:var(--rust-500);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;}
+  .festivo-chip{display:flex;align-items:center;justify-content:space-between;background:var(--paper-100);border:1px solid var(--paper-300);border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:7px;font-size:13px;}
+  .festivo-chip .festivo-remove{background:transparent;border:none;color:var(--coral-700);font-size:12px;font-weight:600;cursor:pointer;}
+
+  nav.bottomnav{position:absolute;left:0;right:0;bottom:0;background:var(--ink-900);display:flex;padding:8px 6px calc(10px + env(safe-area-inset-bottom));max-width:var(--shell-w);margin:0 auto;z-index:40;}
+  .navbtn{flex:1;background:transparent;border:none;color:rgba(231,234,229,0.5);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;font-size:10.5px;font-weight:600;cursor:pointer;border-radius:12px;}
+  .navbtn .navicon{font-size:19px;line-height:1;}
+  .navbtn.active{color:var(--rust-500);}
+
+  .print-block{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    .print-block.print-active, .print-block.print-active *{visibility:visible;}
+    .print-block.print-active{display:block;position:absolute;top:0;left:0;width:100%;background:#fff;color:#1B1E1A;font-family:var(--font-body);padding:10px 16px;font-size:9.5px;}
+    .pr-topline{display:flex;justify-content:space-between;border-bottom:2px solid #20242A;padding-bottom:6px;margin-bottom:6px;}
+    .pr-company-name{color:#20242A;font-weight:700;font-size:13px;margin:0 0 1px;}
+    .pr-company-addr{color:#20242A;font-size:8.5px;margin:0;}
+    .pr-worker-block{text-align:right;font-size:9.5px;}
+    .pr-worker-block p{margin:0 0 1px;font-weight:600;}
+    .pr-title{text-align:center;font-size:12px;color:#20242A;letter-spacing:0.03em;margin:5px 0;font-weight:700;}
+    table.pr-table{width:100%;border-collapse:collapse;margin-bottom:5px;font-size:9px;}
+    .pr-meta-table td{border:1px solid #20242A;padding:2px 6px;}
+    .pr-meta-table .pr-label{background:#DADED4;color:#20242A;font-weight:700;width:110px;}
+    .pr-concepts th, .pr-concepts td{border:1px solid #20242A;padding:2px 6px;text-align:right;}
+    .pr-concepts th{background:#DADED4;color:#20242A;text-transform:uppercase;font-size:8px;}
+    .pr-concepts td:first-child, .pr-concepts th:first-child{text-align:left;}
+    .pr-concepts .pr-subtotal{background:#DADED4;font-weight:700;}
+    .pr-liquido{text-align:right;font-size:12px;font-weight:700;color:#20242A;border-top:2px solid #20242A;padding-top:4px;margin:0 0 8px;}
+    .pr-liquido span{font-family:var(--font-display);}
+    .pr-grid th,.pr-grid td{border:1px solid #20242A;padding:2px 4px;text-align:center;font-size:8px;}
+    .pr-grid th{background:#DADED4;color:#20242A;text-transform:uppercase;font-size:7px;}
+    .pr-grid td:last-child,.pr-grid th:last-child{text-align:left;}
+    .pr-grid tr.pr-total{background:#EDE0D5;font-weight:700;}
+    .pr-grid .pos{color:#96461A;}
+    .pr-grid .neg{color:#963A2F;}
+    .pr-footnote{font-size:7.5px;color:#726C5D;border-top:1px dashed #ccc;padding-top:4px;margin-top:8px;}
+    @page{size:A4;margin:8mm;}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <header class="topbar">
+    <p class="topbar-eyebrow" id="topbar-eyebrow">Ficha diaria</p>
+    <h1 class="topbar-title" id="topbar-title">Horas extra</h1>
+    <p class="topbar-sub" id="topbar-sub">Marca tu salida y controla tus horas extra</p>
+  </header>
+
+  <main>
+
+    <!-- ================= REGISTRO ================= -->
+    <section class="view active" id="view-registro">
+      <div class="date-card">
+        <button class="date-nav-btn" id="btn-day-prev" aria-label="Día anterior">&#8249;</button>
+        <div class="date-center" id="reg-date-center" role="button" aria-label="Elegir fecha">
+          <p class="date-dow" id="reg-dow">Viernes</p>
+          <p class="date-num" id="reg-daynum">07/08</p>
+          <span class="badge-hoy" id="reg-badge-hoy" style="visibility:hidden;">Hoy</span>
+          <span class="badge-jornada" id="reg-badge-jornada">8,32 h</span>
+          <p class="date-pick-hint">&#128197; Toca para elegir fecha</p>
+          <input type="date" id="reg-date-input" class="date-input-hidden">
+        </div>
+        <button class="date-nav-btn" id="btn-day-next" aria-label="Día siguiente">&#8250;</button>
+      </div>
+
+      <button class="btn-fichar-salida" id="btn-fichar-salida">Fichar salida</button>
+      <p class="fichar-hint" id="reg-status-text">Horario por defecto: 8:00 a 13:00 y 14:00 a 17:19</p>
+
+      <button class="btn-editar-toggle" id="btn-editar-toggle">Editar este día &#9662;</button>
+
+      <div id="editar-dia-panel" style="display:none;">
+        <div class="tipo-dia-row">
+          <button class="tipo-dia-btn active" data-tipo="normal" id="tipo-btn-normal">Normal</button>
+          <button class="tipo-dia-btn" data-tipo="vacaciones" id="tipo-btn-vacaciones">Vacaciones</button>
+          <button class="tipo-dia-btn" data-tipo="medico" id="tipo-btn-medico">Médico</button>
+          <button class="tipo-dia-btn" data-tipo="festivo" id="tipo-btn-festivo">Festivo</button>
+          <button class="tipo-dia-btn" data-tipo="baja" id="tipo-btn-baja">Baja</button>
+          <button class="tipo-dia-btn" data-tipo="permiso" id="tipo-btn-permiso">Permiso</button>
+          <button class="tipo-dia-btn" data-tipo="huelga" id="tipo-btn-huelga" style="grid-column:1 / span 2;">Huelga</button>
+        </div>
+
+        <div id="normal-block">
+          <div id="tramos-list"></div>
+          <button class="btn-add-tramo-day" id="btn-add-tramo">+ Añadir tramo (salió y volvió a entrar)</button>
+        </div>
+
+        <div id="vac-block" class="vac-card" style="display:none;">
+          &#127796; Día marcado como vacaciones. No hace falta fichar — cuenta para el Plus de Asistencia y no genera hora de menos.
+        </div>
+
+        <div id="fest-block" class="vac-card" style="display:none;">
+          &#127881; Día marcado como festivo. No cuenta jornada ni se autocompleta con tu horario.
+        </div>
+
+        <div id="baja-block" class="med-card" style="display:none; border-color:var(--rust-700);">
+          &#129658; No cuenta jornada ni Plus de Asistencia. El Salario Base y Comp. Personal se reducen estos días, sustituidos por el subsidio de IT.
+          <label class="field-label" style="margin-top:12px;">Motivo</label>
+          <select id="baja-subtipo">
+            <option value="comun">Enfermedad común / accidente no laboral</option>
+            <option value="profesional">Accidente de trabajo / enfermedad profesional</option>
+          </select>
+          <label class="check-row" id="baja-hosp-row"><input type="checkbox" id="baja-hospitalizacion"> Con hospitalización (100% mientras dure)</label>
+        </div>
+
+        <div id="permiso-block" class="med-card" style="display:none; border-color:var(--violet-500);">
+          <label class="field-label" style="margin-top:0;">Motivo</label>
+          <select id="permiso-motivo"></select>
+          <p class="field-hint" id="permiso-info" style="margin-top:8px;margin-bottom:0;"></p>
+        </div>
+
+        <div id="huelga-block" class="vac-card" style="display:none; border-color:var(--coral-700); color:var(--coral-700);">
+          &#9995; Día de huelga. No genera derecho a salario — se descuenta del Salario Base y Comp. Personal de este mes, sin ningún subsidio. No cuenta para el Plus de Asistencia.
+        </div>
+
+        <div id="med-block" class="med-card" style="display:none;">
+          <label class="field-label">Motivo</label>
+          <select id="med-subtipo">
+            <option value="propia">Consulta médica propia (sin límite, con justificante)</option>
+            <option value="acompanar">Acompañar a familiar (límite anual configurable)</option>
+          </select>
+          <label class="field-label">Horas de ausencia</label>
+          <input type="number" id="med-horas" min="0" step="0.5">
+          <p class="field-hint" style="margin-top:8px;margin-bottom:0;">Si trabajaste el resto del día, ficha esas horas abajo como un tramo normal.</p>
+          <div id="med-tramos-list" style="margin-top:10px;"></div>
+          <button class="btn-add-tramo-day" id="btn-add-tramo-med" style="margin-bottom:0;">+ Añadir tramo trabajado</button>
+        </div>
+
+        <div class="result-card">
+          <div class="result-row"><span class="lbl">Horas trabajadas</span><span class="val" id="res-trabajadas">0,00 h</span></div>
+          <div class="result-row"><span class="lbl">Jornada exigida ese día</span><span class="val neutral" id="res-teorica">0,00 h</span></div>
+          <div class="gauge"><div class="gauge-fill" id="res-gauge" style="width:0%;"></div></div>
+          <div class="result-row total"><span class="lbl">Horas extra</span><span class="val" id="res-diferencia">0,00 h</span></div>
+        </div>
+
+        <button class="btn-primary" id="btn-guardar">Guardar jornada</button>
+        <button class="btn-secondary" id="btn-restaurar-defecto">Restaurar horario por defecto</button>
+        <button class="btn-danger-text" id="btn-eliminar-dia" style="display:none;">Eliminar este registro</button>
+      </div>
+    </section>
+
+    <!-- ================= LISTADO ================= -->
+    <section class="view" id="view-listado">
+      <div class="month-bar">
+        <button class="date-nav-btn" id="btn-month-prev" aria-label="Mes anterior">&#8249;</button>
+        <span class="month-label" id="listado-month-label">Agosto 2026</span>
+        <button class="date-nav-btn" id="btn-month-next" aria-label="Mes siguiente">&#8250;</button>
+      </div>
+
+      <div class="summary-row">
+        <div class="stat-card">
+          <p class="stat-label">Horas trabajadas</p>
+          <p class="stat-value" id="stat-trabajadas">0,00</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Horas extra</p>
+          <p class="stat-value" id="stat-extra">0,00</p>
+        </div>
+      </div>
+
+      <div class="vac-card" id="vac-summary-card">
+        &#127796; Vacaciones pendientes: <strong id="vac-saldo">0</strong> días
+      </div>
+
+      <div class="med-card" id="med-summary-card" style="text-align:center;color:var(--blue-700);font-size:13px;font-weight:600;">
+        &#128657; Acompañar familiar: <strong id="med-acompanar-saldo">0:00</strong> usadas de <strong id="med-acompanar-limite">26</strong> h/año
+      </div>
+
+      <h2 class="section-title">Días del mes</h2>
+      <div class="cal-dow-row">
+        <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <div id="ficha-list" style="display:none;"></div>
+
+      <div class="print-bar">
+        <button class="btn-outline-sm" id="btn-print-listado">&#128424; Imprimir / PDF</button>
+        <button class="btn-outline-sm" id="btn-share-listado">&#8593; Compartir</button>
+      </div>
+      <div class="print-bar" style="margin-top:8px;">
+        <button class="btn-outline-sm" id="btn-export-backup-2">&#8593; Copia seguridad</button>
+      </div>
+    </section>
+
+    <!-- ================= NOMINA ================= -->
+    <section class="view" id="view-extra">
+      <div class="month-bar" style="margin-bottom:14px;">
+        <button class="date-nav-btn" id="btn-extra-month-prev" aria-label="Mes anterior">&#8249;</button>
+        <span class="month-label" id="extra-month-label">Agosto 2026</span>
+        <button class="date-nav-btn" id="btn-extra-month-next" aria-label="Mes siguiente">&#8250;</button>
+      </div>
+
+      <div class="payslip">
+        <div class="payslip-head">
+          <p class="payslip-head-title">Nómina estimada</p>
+          <p class="payslip-head-sub" id="extra-head-sub">Sin datos este mes</p>
+        </div>
+        <div id="extra-body"></div>
+      </div>
+      <p class="field-hint" style="margin-top:10px;">El Salario Base, Comp. Personal y Plus Asistencia son del mes natural. Las horas extra se cuentan del 25 del mes anterior al 24 de este mes, según tu empresa.</p>
+
+      <button class="btn-revisada" id="btn-revisada">Marcar como revisada</button>
+
+      <div class="print-bar">
+        <button class="btn-outline-sm" id="btn-print-extra">&#128424; Imprimir / PDF</button>
+        <button class="btn-outline-sm" id="btn-share-extra">&#8593; Compartir</button>
+      </div>
+    </section>
+
+    <!-- ================= AJUSTES ================= -->
+    <section class="view" id="view-ajustes">
+      <div class="stub-note">&#9881; Estos datos se guardan solo en este móvil. Puedes editarlos cuando quieras.</div>
+
+      <div class="settings-group">
+        <h3>Datos personales</h3>
+        <div class="field-row"><label>Nombre</label><input id="cfg-nombre" style="width:150px;text-align:left;"></div>
+        <div class="field-row"><label>DNI</label><input id="cfg-dni"></div>
+        <div class="field-row"><label>Categoría</label><input id="cfg-categoria" style="width:140px;text-align:left;"></div>
+        <div class="field-row"><label>Nº Personal</label><input id="cfg-npersonal"></div>
+        <div class="field-row"><label>Nº afil. Seg. Soc.</label><input id="cfg-nafilss"></div>
+        <div class="field-row"><label>Fecha de alta</label><input type="date" id="cfg-fechaalta"></div>
+        <div class="field-row"><label>Dirección</label><input id="cfg-direccion" style="width:140px;text-align:left;"></div>
+        <div class="field-row"><label>Población</label><input id="cfg-poblacion" style="width:140px;text-align:left;"></div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Empresa</h3>
+        <div class="field-row"><label>Nombre</label><input id="cfg-empresa-nombre" style="width:150px;text-align:left;"></div>
+        <div class="field-row"><label>Nº S.S. empresa</label><input id="cfg-empresa-nss"></div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Horario por defecto</h3>
+        <p class="field-hint" style="margin-top:0;">Rellena cada día nuevo. Cámbialo cuando quieras — no afecta a la jornada exigida ni a los días ya guardados.</p>
+        <div id="defecto-tramos-list"></div>
+        <button class="btn-add-tramo-day" id="btn-add-tramo-defecto" style="margin-bottom:0;">+ Añadir tramo</button>
+      </div>
+
+      <div class="settings-group">
+        <h3>Historial de condiciones</h3>
+        <p class="field-hint" style="margin-top:0;">Cada jornada usa las condiciones vigentes en su fecha. Si cambia el convenio o el sueldo, añade una entrada nueva.</p>
+        <div id="tarifas-list"></div>
+        <button class="btn-add-tramo" id="btn-add-tarifa">+ Añadir cambio de condiciones</button>
+      </div>
+
+      <div class="settings-group">
+        <h3>Festivos</h3>
+        <p class="field-hint" style="margin-top:0;">Los días festivos no cuentan como jornada, ni se autocompletan con tu horario.</p>
+        <div class="add-row">
+          <input type="date" id="festivo-nueva-fecha" class="text-input">
+          <button class="btn-add-inline" id="btn-add-festivo">+ Añadir</button>
+        </div>
+        <div id="festivos-list"></div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Marcar vacaciones por rango</h3>
+        <p class="field-hint" style="margin-top:0;">Marca varios días de vacaciones a la vez. Se aplica solo a días laborables (no fines de semana ni festivos).</p>
+        <div class="field-row"><label>Desde</label><input type="date" id="vac-rango-desde" class="date-input"></div>
+        <div class="field-row"><label>Hasta</label><input type="date" id="vac-rango-hasta" class="date-input"></div>
+        <button class="btn-secondary" id="btn-marcar-vac-rango" style="margin-top:6px;">Marcar como vacaciones</button>
+      </div>
+
+      <div class="settings-group">
+        <h3>Marcar baja por rango</h3>
+        <p class="field-hint" style="margin-top:0;">Para bajas largas, marca todo el rango de una vez (incluye fines de semana, ya que la baja no se interrumpe).</p>
+        <div class="field-row"><label>Desde</label><input type="date" id="baja-rango-desde" class="date-input"></div>
+        <div class="field-row"><label>Hasta</label><input type="date" id="baja-rango-hasta" class="date-input"></div>
+        <label class="field-label" style="margin-top:10px;">Motivo</label>
+        <select id="baja-rango-subtipo">
+          <option value="comun">Enfermedad común / accidente no laboral</option>
+          <option value="profesional">Accidente de trabajo / enfermedad profesional</option>
+        </select>
+        <label class="check-row"><input type="checkbox" id="baja-rango-hospitalizacion"> Con hospitalización (100% mientras dure)</label>
+        <button class="btn-secondary" id="btn-marcar-baja-rango" style="margin-top:10px;">Marcar como baja</button>
+      </div>
+
+      <div class="settings-group">
+        <h3>Vacaciones por año</h3>
+        <p class="field-hint" style="margin-top:0;">Los días disfrutados se cuentan solos desde Registro. Ajusta aquí los asignados y los compensados en dinero.</p>
+        <div id="vacaciones-list"></div>
+        <button class="btn-add-tramo" id="btn-add-vac-year">+ Añadir año</button>
+      </div>
+
+      <div class="settings-group">
+        <h3>Copia de seguridad</h3>
+        <button class="btn-secondary" id="btn-export-backup" style="margin-top:0;">&#8593; Exportar / guardar en Drive</button>
+        <button class="btn-secondary" id="btn-import-backup">&#8595; Restaurar desde archivo</button>
+        <input type="file" id="import-file-input" accept="application/json" style="display:none;">
+        <p class="field-hint" id="backup-status" style="margin-top:8px;"></p>
+      </div>
+
+      <div class="settings-group">
+        <h3>Instalar en el móvil</h3>
+        <ol class="install-steps">
+          <li>Abre este archivo con Chrome.</li>
+          <li>Toca el menú (&#8942;) arriba a la derecha.</li>
+          <li>Elige "Añadir a pantalla de inicio".</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast"><span class="dot"></span><span id="toast-text">Guardado ✓</span></div>
+
+  <nav class="bottomnav">
+    <button class="navbtn active" data-view="registro"><span class="navicon">&#9998;</span>Registro</button>
+    <button class="navbtn" data-view="listado"><span class="navicon">&#9776;</span>Listado</button>
+    <button class="navbtn" data-view="extra"><span class="navicon">&#128176;</span>Nómina</button>
+    <button class="navbtn" data-view="ajustes"><span class="navicon">&#9881;</span>Ajustes</button>
+  </nav>
+
+</div>
+
+<div id="print-nomina" class="print-block">
+  <div class="pr-topline">
+    <div><p class="pr-company-name" id="pn-empresa">Empresa</p><p class="pr-company-addr" id="pn-empresa-nss"></p></div>
+    <div class="pr-worker-block"><p id="pn-nombre">Nombre</p><p class="pr-company-addr" id="pn-cat"></p></div>
+  </div>
+  <p class="pr-title" id="pn-title">Nómina — Agosto 2026</p>
+  <table class="pr-table pr-meta-table">
+    <tr><td class="pr-label">DNI</td><td id="pn-dni"></td><td class="pr-label">Nº Personal</td><td id="pn-npers"></td></tr>
+    <tr><td class="pr-label">Nº afil. S.S.</td><td id="pn-nafil"></td><td class="pr-label">Periodo horas extra</td><td id="pn-periodo"></td></tr>
+  </table>
+  <table class="pr-table pr-concepts">
+    <thead><tr><th>Concepto</th><th>Importe</th></tr></thead>
+    <tbody id="pn-body"></tbody>
+    <tfoot id="pn-foot"></tfoot>
+  </table>
+  <p class="pr-liquido">Líquido estimado: <span id="pn-liquido">0,00 €</span></p>
+  <p class="pr-title" style="font-size:10px;">Detalle de fichajes del periodo de horas extra</p>
+  <table class="pr-grid">
+    <thead><tr><th>Día</th><th>Tramos</th><th>Trabajadas</th><th>Exigida</th><th>Extra</th></tr></thead>
+    <tbody id="pn-fichajes"></tbody>
+  </table>
+  <p class="pr-footnote">Documento generado por la app a partir de las jornadas registradas y las condiciones configuradas. No sustituye a la nómina oficial.</p>
+</div>
+
+<div id="print-listado" class="print-block">
+  <p class="pr-title" id="pl-title">Horas — Agosto 2026</p>
+  <p class="pr-footnote" id="pl-sub" style="border:none;padding:0;margin:0 0 6px;text-align:center;"></p>
+  <table class="pr-grid">
+    <thead><tr><th>Día</th><th>Tipo</th><th>Tramos</th><th>Trabajadas</th><th>Exigida</th><th>Extra</th></tr></thead>
+    <tbody id="pl-body"></tbody>
+    <tfoot id="pl-foot"></tfoot>
+  </table>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'horasExtraApp_v2';
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var DOW_FULL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var DOW3 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+  function defaultState(){
+    return {
+      perfil:{ nombre:'', dni:'', categoria:'', nPersonal:'', nAfilSS:'', fechaAlta:'', direccion:'', poblacion:'' },
+      empresa:{ nombre:'', nss:'' },
+      defecto:{ tramos:[{entrada:'08:00',salida:'13:00'},{entrada:'14:00',salida:'17:19'}] },
+      festivos:[],
+      mesOverrides:{},
+      nominasRevisadas:{},
+      condiciones:[
+        { id:'c2026', vigenteDesde:'2026-01-01',
+          salarioBase:0, compPersonal:0, plusAsistenciaDia:0, gratifVoluntariaBase:0,
+          pctContComunes:0, pctDesempleo:0, pctFormProf:0, pctIRPF:0,
+          precioHoraExtraLV:0, precioHoraExtraSab:0, baseReguladoraDia:0,
+          tiempoPorDia:7.81666667, viernesTardeLibre:true,
+          jornada:{ '0':0, '1':8.31666667, '2':8.31666667, '3':8.31666667, '4':8.31666667, '5':6, '6':0 } }
+      ],
+      vacaciones:{ porAno:{} },
+      entries:{}
+    };
+  }
+  function recomputeJornada(cond){
+    var base = cond.tiempoPorDia || 0;
+    if(cond.viernesTardeLibre){
+      cond.jornada = { '0':0, '1':base+0.5, '2':base+0.5, '3':base+0.5, '4':base+0.5, '5':6, '6':0 };
+    } else {
+      cond.jornada = { '0':0, '1':base, '2':base, '3':base, '4':base, '5':base, '6':0 };
+    }
+  }
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && parsed.condiciones && parsed.entries){
+          if(!parsed.festivos) parsed.festivos = [];
+          if(!parsed.mesOverrides) parsed.mesOverrides = {};
+          if(!parsed.nominasRevisadas) parsed.nominasRevisadas = {};
+          parsed.condiciones.forEach(function(c){
+            if(c.tiempoPorDia==null){ c.tiempoPorDia = c.jornada && c.jornada['1'] ? c.jornada['1'] : 8; }
+            if(c.viernesTardeLibre==null){ c.viernesTardeLibre = false; }
+            if(c.baseReguladoraDia==null){ c.baseReguladoraDia = Math.round(((c.salarioBase||0)/30)*100)/100; }
+          });
+          return parsed;
+        }
+      }
+    }catch(e){}
+    return defaultState();
+  }
+  function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+  var state = loadState();
+
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function toISO(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function fromISO(iso){ var p=iso.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+  function addDaysISO(iso,n){ var d=fromISO(iso); d.setDate(d.getDate()+n); return toISO(d); }
+  function todayISO(){ return toISO(new Date()); }
+  function monthKey(iso){ return iso.slice(0,7); }
+  function monthLabel(ym){ var p=ym.split('-').map(Number); var m=MESES[p[1]-1]; return m.charAt(0).toUpperCase()+m.slice(1)+' '+p[0]; }
+  function addMonths(ym,n){ var p=ym.split('-').map(Number); var d=new Date(p[0],p[1]-1+n,1); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+  function monthDaysRange(ym){ var p=ym.split('-').map(Number); var start=p[0]+'-'+pad2(p[1])+'-01'; var last=new Date(p[0],p[1],0).getDate(); var end=p[0]+'-'+pad2(p[1])+'-'+pad2(last); return [start,end]; }
+  function fechaEspanola(iso){ if(!iso) return ''; var d=fromISO(iso); return pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear(); }
+  function extraPeriodRange(ym){
+    var p = ym.split('-').map(Number);
+    var endDate = new Date(p[0],p[1]-1,24);
+    var startDate = new Date(p[0],p[1]-2,25);
+    return [toISO(startDate), toISO(endDate)];
+  }
+
+  function parseNum(v){
+    if(v===null||v===undefined) return 0;
+    var s = String(v).replace(/[^\d,.\-]/g,'').replace(',','.');
+    var n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+  function fmtH(n){ return (n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtHM(h){
+    h = h||0;
+    var neg = h<0;
+    var totalMin = Math.round(Math.abs(h)*60);
+    var hh = Math.floor(totalMin/60);
+    var mm = totalMin%60;
+    return (neg?'-':'')+hh+':'+pad2(mm)+' h';
+  }
+  function fmtCompactExtra(h){
+    var v = Math.round((h||0)*2)/2;
+    if(Math.abs(v)<0.004) return '0';
+    var sign = v>0 ? '+' : '&minus;';
+    var av = Math.abs(v);
+    var isWhole = Math.abs(av-Math.round(av))<0.01;
+    return sign + (isWhole ? Math.round(av) : av.toFixed(1));
+  }
+  function hmToDecimal(str){
+    if(str===null||str===undefined) return 0;
+    str = String(str).trim();
+    if(str.indexOf(':')>-1){
+      var neg = str.charAt(0)==='-';
+      if(neg) str = str.slice(1);
+      var parts = str.split(':');
+      var h = parseInt(parts[0],10)||0;
+      var m = parseInt(parts[1],10)||0;
+      var val = h+m/60;
+      return neg?-val:val;
+    }
+    return parseNum(str);
+  }
+  function fmtEUR(n){ return (n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'; }
+  function escapeHTML(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function toMinutes(hhmm){ if(!hhmm) return null; var p=hhmm.split(':'); return parseInt(p[0],10)*60+parseInt(p[1],10); }
+  function roundHalf(n){ return Math.round(n*2)/2; }
+
+  function computeTramosNet(tramos){
+    var totalMin=0;
+    (tramos||[]).forEach(function(t){
+      if(!t.entrada||!t.salida) return;
+      var mIn=toMinutes(t.entrada), mOut=toMinutes(t.salida);
+      var diff=mOut-mIn; if(diff<0) diff+=24*60;
+      if(diff<0) diff=0;
+      totalMin+=diff;
+    });
+    return totalMin/60;
+  }
+
+  function findCondForDate(iso){
+    var candidates = state.condiciones.filter(function(c){return c.vigenteDesde<=iso;}).sort(function(a,b){return b.vigenteDesde.localeCompare(a.vigenteDesde);});
+    if(candidates.length) return candidates[0];
+    var sorted = state.condiciones.slice().sort(function(a,b){return a.vigenteDesde.localeCompare(b.vigenteDesde);});
+    return sorted[0] || null;
+  }
+  function isFestivo(iso){
+    return (state.festivos||[]).indexOf(iso) > -1;
+  }
+  function jornadaTeoricaDia(iso){
+    if(isFestivo(iso)) return 0;
+    var cond = findCondForDate(iso);
+    if(!cond) return 0;
+    var dow = fromISO(iso).getDay();
+    return cond.jornada[String(dow)] || 0;
+  }
+
+  function synthesizeTramosForDay(teoricaBase){
+    var base = JSON.parse(JSON.stringify(state.defecto.tramos)).filter(function(t){return t.entrada&&t.salida;});
+    if(!base.length) return base;
+    var total = computeTramosNet(base);
+    if(total <= teoricaBase + 0.0001) return base;
+    var startMin = toMinutes(base[0].entrada);
+    var endMin = startMin + Math.round(teoricaBase*60);
+    var endHH = Math.floor(endMin/60)%24;
+    var endMM = endMin%60;
+    return [{ entrada: base[0].entrada, salida: pad2(endHH)+':'+pad2(endMM) }];
+  }
+  function horarioEstipuladoDia(iso){
+    var teoricaBase = jornadaTeoricaDia(iso);
+    if(teoricaBase<=0) return [];
+    return synthesizeTramosForDay(teoricaBase);
+  }
+  function calcularHorasExtraClock(tramosActuales, tramosEstipulados){
+    var actuales = (tramosActuales||[]).filter(function(t){return t.entrada&&t.salida;});
+    if(!actuales.length) return 0;
+    if(!tramosEstipulados || !tramosEstipulados.length){
+      // Sin horario estipulado (fin de semana / festivo trabajado): todo lo trabajado es extra
+      return computeTramosNet(actuales);
+    }
+    var actEntradaMin = toMinutes(actuales[0].entrada);
+    var actSalidaMin = toMinutes(actuales[actuales.length-1].salida);
+    if(actSalidaMin < actEntradaMin) actSalidaMin += 24*60;
+    var estEntradaMin = toMinutes(tramosEstipulados[0].entrada);
+    var estSalidaMin = toMinutes(tramosEstipulados[tramosEstipulados.length-1].salida);
+    var antes = Math.max(0, estEntradaMin - actEntradaMin);
+    var despues = Math.max(0, actSalidaMin - estSalidaMin);
+    return (antes+despues)/60;
+  }
+  function bajaDiaEpisodio(iso){
+    var subtipo = state.entries[iso] ? state.entries[iso].bajaSubtipo : null;
+    var count = 1;
+    var cur = iso;
+    while(true){
+      var prev = addDaysISO(cur, -1);
+      var e = state.entries[prev];
+      if(e && e.tipo==='baja' && (e.bajaSubtipo||'comun')===(subtipo||'comun')){
+        count++;
+        cur = prev;
+      } else break;
+    }
+    return count;
+  }
+  function bajaPorcentaje(iso, entry){
+    if(entry.bajaSubtipo==='profesional') return 1.0;
+    if(entry.bajaHospitalizacion) return 1.0;
+    var diaNum = bajaDiaEpisodio(iso);
+    return diaNum<=20 ? 0.60 : 0.75;
+  }
+  var MOTIVOS_PERMISO = {
+    matrimonio: { label:'Matrimonio o pareja de hecho', info:'Tienes derecho a 15 días naturales.', retribuido:true },
+    hospitalizacionFamiliar: { label:'Accidente/enfermedad grave de familiar (con hospitalización)', info:'Tienes derecho a 5 días laborales desde el hecho causante, ampliables a 2 más si hay desplazamiento.', retribuido:true },
+    fallecimiento1: { label:'Fallecimiento cónyuge, hijos/as, padres/madres', info:'Tienes derecho a 3 días laborables (5 si necesitas desplazarte).', retribuido:true },
+    fallecimiento2: { label:'Fallecimiento familiar hasta 2º de afinidad', info:'Tienes derecho a 2 días laborables (4 si necesitas desplazarte).', retribuido:true },
+    trasladoDomicilio: { label:'Traslado de domicilio habitual', info:'Tienes derecho a 1 día laborable.', retribuido:true },
+    deberInexcusable: { label:'Deber inexcusable de carácter público', info:'El tiempo indispensable para cumplirlo.', retribuido:true },
+    examenesPrenatales: { label:'Exámenes prenatales / preparación al parto', info:'El tiempo necesario dentro de la jornada.', retribuido:true },
+    otroRetribuido: { label:'Otro permiso retribuido', info:'Según lo acordado con la empresa.', retribuido:true },
+    noRetribuido: { label:'Permiso sin sueldo', info:'No genera derecho a salario esos días — se descuenta del Salario Base y Comp. Personal.', retribuido:false }
+  };
+  function diaInfo(iso){
+    var entry = state.entries[iso];
+    var teoricaBase = jornadaTeoricaDia(iso);
+    var auto = false;
+    if(!entry){
+      if(teoricaBase<=0) return null;
+      entry = { tipo:'normal', tramos: synthesizeTramosForDay(teoricaBase) };
+      auto = true;
+    }
+    var tipo = entry.tipo || 'normal';
+    var trabajadas = computeTramosNet(entry.tramos||[]);
+    var teoricaEfectiva = teoricaBase;
+    var medHoras = 0;
+    var horasExtra = 0;
+    var bajaSubsidio = 0;
+    var bajaPct = 0;
+    var permisoRetribuido = true;
+    if(tipo==='baja'){
+      teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
+      var cond = findCondForDate(iso);
+      bajaPct = bajaPorcentaje(iso, entry);
+      bajaSubsidio = (cond.baseReguladoraDia||0) * bajaPct;
+    } else if(tipo==='vacaciones'){
+      teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
+    } else if(tipo==='permiso'){
+      teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
+      var motivoCfg = MOTIVOS_PERMISO[entry.permisoMotivo] || MOTIVOS_PERMISO.otroRetribuido;
+      permisoRetribuido = motivoCfg.retribuido;
+    } else if(tipo==='huelga'){
+      teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
+      permisoRetribuido = false;
+    } else if(tipo==='medico'){
+      medHoras = entry.medicoHoras!=null ? entry.medicoHoras : teoricaBase;
+      teoricaEfectiva = Math.max(0, teoricaBase - medHoras);
+      horasExtra = Math.max(0, trabajadas - teoricaEfectiva);
+    } else {
+      horasExtra = calcularHorasExtraClock(entry.tramos, horarioEstipuladoDia(iso));
+    }
+    return { iso:iso, entry:entry, tipo:tipo, auto:auto, tramos:entry.tramos||[], trabajadas:trabajadas, teorica:teoricaEfectiva, teoricaBase:teoricaBase, diff:trabajadas-teoricaEfectiva, horasExtra:horasExtra, medHoras:medHoras, medSubtipo:entry.medicoSubtipo||'', bajaSubtipo:entry.bajaSubtipo||'comun', bajaHospitalizacion:!!entry.bajaHospitalizacion, bajaPct:bajaPct, bajaSubsidio:bajaSubsidio, permisoMotivo:entry.permisoMotivo||'otroRetribuido', permisoRetribuido:permisoRetribuido };
+  }
+
+  function showToast(msg){
+    var toast=document.getElementById('toast');
+    document.getElementById('toast-text').textContent=msg;
+    toast.classList.add('show');
+    setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+  }
+
+  var titles = {
+    registro: {eyebrow:"Ficha diaria", title:"Horas extra", sub:"Marca tu salida y controla tus horas extra"},
+    listado:  {eyebrow:"Historial", title:"Listado mensual", sub:"Todas tus jornadas, día a día"},
+    extra:    {eyebrow:"Estimación", title:"Nómina", sub:"Sueldo fijo, plus asistencia y horas extra"},
+    ajustes:  {eyebrow:"Configuración", title:"Ajustes", sub:"Horario, condiciones y copia de seguridad"}
+  };
+  function switchToView(v){
+    document.querySelectorAll('.navbtn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
+    document.querySelectorAll('.view').forEach(function(sec){ sec.classList.remove('active'); });
+    document.getElementById('view-'+v).classList.add('active');
+    var t=titles[v];
+    document.getElementById('topbar-eyebrow').textContent=t.eyebrow;
+    document.getElementById('topbar-title').textContent=t.title;
+    document.getElementById('topbar-sub').textContent=t.sub;
+    if(v==='listado') renderListado();
+    if(v==='extra') renderExtra();
+    if(v==='ajustes') renderAjustes();
+    if(v==='registro') renderRegistro();
+  }
+  document.querySelectorAll('.navbtn').forEach(function(btn){
+    btn.addEventListener('click', function(){ switchToView(btn.getAttribute('data-view')); });
+  });
+
+  /* ================= REGISTRO: TRAMOS ================= */
+  function tramoCardHTML(t,index,total){
+    var showRemove = total>1;
+    return '<div class="tramo-card">'+
+      '<div class="tramo-header"><span>Tramo '+(index+1)+'</span><button class="tramo-remove-x" style="display:'+(showRemove?'block':'none')+';">Eliminar</button></div>'+
+      '<div class="tramo-times">'+
+        '<div class="time-field"><label>Entrada</label>'+
+          '<div class="time-field-row"><input type="text" readonly inputmode="none" class="tin time-input-picker" value="'+(t.entrada||'')+'" placeholder="--:--"><button type="button" class="btn-now" data-target="tin">Ahora</button></div>'+
+        '</div>'+
+        '<div class="time-field"><label>Salida</label>'+
+          '<div class="time-field-row"><input type="text" readonly inputmode="none" class="tout time-input-picker" value="'+(t.salida||'')+'" placeholder="--:--"><button type="button" class="btn-now" data-target="tout">Ahora</button></div>'+
+        '</div>'+
+      '</div></div>';
+  }
+  function nowHM(){
+    var d = new Date();
+    return pad2(d.getHours())+':'+pad2(d.getMinutes());
+  }
+
+  /* ================= SELECTOR DE HORA (rueda) ================= */
+  var timePickerState = { onConfirm:null };
+  var TP_ITEM_H = 44;
+  function buildTimePickerModal(){
+    if(document.getElementById('time-picker-modal')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'time-picker-modal';
+    overlay.className = 'time-picker-overlay';
+    overlay.style.display = 'none';
+    overlay.innerHTML =
+      '<div class="time-picker-sheet">'+
+        '<p class="time-picker-title">Elige la hora</p>'+
+        '<div class="time-picker-wheels">'+
+          '<div class="tp-col" id="tp-hours"><div class="tp-col-pad"></div></div>'+
+          '<span class="tp-colon">:</span>'+
+          '<div class="tp-col" id="tp-minutes"><div class="tp-col-pad"></div></div>'+
+        '</div>'+
+        '<div class="time-picker-actions">'+
+          '<button type="button" class="tp-btn cancel" id="tp-cancel">Cancelar</button>'+
+          '<button type="button" class="tp-btn ok" id="tp-ok">Listo</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    var hCol = document.getElementById('tp-hours');
+    var mCol = document.getElementById('tp-minutes');
+    for(var h=0; h<24; h++){ var dh=document.createElement('div'); dh.className='tp-item'; dh.textContent=pad2(h); hCol.appendChild(dh); }
+    hCol.appendChild(document.createElement('div')).className='tp-col-pad';
+    for(var m=0; m<60; m++){ var dm=document.createElement('div'); dm.className='tp-item'; dm.textContent=pad2(m); mCol.appendChild(dm); }
+    mCol.appendChild(document.createElement('div')).className='tp-col-pad';
+
+    function markSelected(col){
+      var idx = Math.max(0, Math.round(col.scrollTop/TP_ITEM_H));
+      var items = col.querySelectorAll('.tp-item');
+      items.forEach(function(it,i){ it.classList.toggle('tp-selected', i===idx); });
+      return idx;
+    }
+    var hTimer, mTimer;
+    hCol.addEventListener('scroll', function(){ clearTimeout(hTimer); hTimer=setTimeout(function(){ markSelected(hCol); }, 60); });
+    mCol.addEventListener('scroll', function(){ clearTimeout(mTimer); mTimer=setTimeout(function(){ markSelected(mCol); }, 60); });
+
+    document.getElementById('tp-cancel').addEventListener('click', closeTimePicker);
+    document.getElementById('tp-ok').addEventListener('click', function(){
+      var hIdx = Math.max(0, Math.round(hCol.scrollTop/TP_ITEM_H));
+      var mIdx = Math.max(0, Math.round(mCol.scrollTop/TP_ITEM_H));
+      var val = pad2(hIdx)+':'+pad2(mIdx);
+      var cb = timePickerState.onConfirm;
+      closeTimePicker();
+      if(cb) cb(val);
+    });
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeTimePicker(); });
+  }
+  function closeTimePicker(){
+    var overlay = document.getElementById('time-picker-modal');
+    if(overlay) overlay.style.display='none';
+  }
+  function openTimePicker(currentValue, onConfirm){
+    buildTimePickerModal();
+    var overlay = document.getElementById('time-picker-modal');
+    var hCol = document.getElementById('tp-hours');
+    var mCol = document.getElementById('tp-minutes');
+    var parts = (currentValue && currentValue.indexOf(':')>-1 ? currentValue : nowHM()).split(':');
+    var h = Math.min(23, Math.max(0, parseInt(parts[0],10)||0));
+    var m = Math.min(59, Math.max(0, parseInt(parts[1],10)||0));
+    timePickerState.onConfirm = onConfirm;
+    overlay.style.display = 'flex';
+    hCol.scrollTop = h*TP_ITEM_H;
+    mCol.scrollTop = m*TP_ITEM_H;
+    hCol.querySelectorAll('.tp-item').forEach(function(it,i){ it.classList.toggle('tp-selected', i===h); });
+    mCol.querySelectorAll('.tp-item').forEach(function(it,i){ it.classList.toggle('tp-selected', i===m); });
+  }
+  document.addEventListener('click', function(e){
+    var target = e.target.closest ? e.target.closest('.time-input-picker') : null;
+    if(!target) return;
+    openTimePicker(target.value, function(newVal){
+      target.value = newVal;
+      target.dispatchEvent(new Event('input', {bubbles:true}));
+      target.dispatchEvent(new Event('change', {bubbles:true}));
+    });
+  });
+
+  function renderTramosInto(containerId, tramosArray, onChange){
+    var list = document.getElementById(containerId);
+    list.innerHTML='';
+    var arr = (tramosArray && tramosArray.length) ? tramosArray : [{entrada:'',salida:''}];
+    arr.forEach(function(t,i){
+      var wrap=document.createElement('div');
+      wrap.innerHTML = tramoCardHTML(t,i,arr.length);
+      var card = wrap.firstElementChild;
+      list.appendChild(card);
+      card.querySelectorAll('input').forEach(function(inp){ inp.addEventListener('input', onChange); });
+      card.querySelectorAll('.btn-now').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var target = btn.getAttribute('data-target');
+          card.querySelector('.'+target).value = nowHM();
+          onChange();
+        });
+      });
+      var rm = card.querySelector('.tramo-remove-x');
+      if(rm){ rm.addEventListener('click', function(){ card.remove(); renumberTramosIn(containerId); onChange(); }); }
+    });
+  }
+  function renumberTramosIn(containerId){
+    var cards = document.querySelectorAll('#'+containerId+' .tramo-card');
+    cards.forEach(function(card,i){
+      card.querySelector('.tramo-header span').textContent='Tramo '+(i+1);
+      var rm=card.querySelector('.tramo-remove-x');
+      if(rm) rm.style.display = cards.length>1?'block':'none';
+    });
+  }
+  function readTramosFrom(containerId){
+    var cards = document.querySelectorAll('#'+containerId+' .tramo-card');
+    var arr=[];
+    cards.forEach(function(card){
+      arr.push({ entrada: card.querySelector('.tin').value, salida: card.querySelector('.tout').value });
+    });
+    return arr;
+  }
+
+  /* ================= REGISTRO ================= */
+  var regCurrentDate = todayISO();
+  var regTipo = 'normal';
+
+  function recalcRegistro(){
+    var teoricaBase = jornadaTeoricaDia(regCurrentDate);
+    document.getElementById('reg-badge-jornada').textContent = fmtHM(teoricaBase);
+    var trabajadas, teoricaEfectiva, horasExtra;
+    if(regTipo==='vacaciones' || regTipo==='festivo' || regTipo==='baja' || regTipo==='permiso' || regTipo==='huelga'){
+      trabajadas=0; teoricaEfectiva=0; horasExtra=0;
+    } else if(regTipo==='medico'){
+      var medHoras = parseNum(document.getElementById('med-horas').value);
+      teoricaEfectiva = Math.max(0, teoricaBase - medHoras);
+      trabajadas = computeTramosNet(readTramosFrom('med-tramos-list'));
+      horasExtra = Math.max(0, trabajadas - teoricaEfectiva);
+    } else {
+      var tramosActuales = readTramosFrom('tramos-list');
+      trabajadas = computeTramosNet(tramosActuales);
+      teoricaEfectiva = teoricaBase;
+      horasExtra = calcularHorasExtraClock(tramosActuales, horarioEstipuladoDia(regCurrentDate));
+    }
+    document.getElementById('res-trabajadas').textContent = fmtHM(trabajadas);
+    document.getElementById('res-teorica').textContent = fmtHM(teoricaEfectiva);
+    var pct = teoricaEfectiva>0 ? Math.min(100,(trabajadas/teoricaEfectiva)*100) : (trabajadas>0?100:0);
+    var gauge = document.getElementById('res-gauge');
+    gauge.style.width = pct+'%';
+    gauge.className = 'gauge-fill' + (horasExtra>0.004 ? ' over' : '');
+    var diffEl = document.getElementById('res-diferencia');
+    var sign = horasExtra>0.004 ? '+' : '';
+    diffEl.textContent = sign+fmtHM(horasExtra);
+    diffEl.className = 'val ' + (horasExtra>0.004?'positive':'neutral');
+  }
+
+  function setTipoUI(tipo){
+    regTipo = tipo;
+    document.querySelectorAll('.tipo-dia-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-tipo')===tipo);
+      b.classList.toggle('vac', b.getAttribute('data-tipo')==='vacaciones' && tipo==='vacaciones');
+      b.classList.toggle('med', b.getAttribute('data-tipo')==='medico' && tipo==='medico');
+      b.classList.toggle('fest', b.getAttribute('data-tipo')==='festivo' && tipo==='festivo');
+      b.classList.toggle('baja', b.getAttribute('data-tipo')==='baja' && tipo==='baja');
+      b.classList.toggle('permiso', b.getAttribute('data-tipo')==='permiso' && tipo==='permiso');
+      b.classList.toggle('huelga', b.getAttribute('data-tipo')==='huelga' && tipo==='huelga');
+    });
+    document.getElementById('normal-block').style.display = tipo==='normal' ? 'block' : 'none';
+    document.getElementById('vac-block').style.display = tipo==='vacaciones' ? 'block' : 'none';
+    document.getElementById('med-block').style.display = tipo==='medico' ? 'block' : 'none';
+    document.getElementById('fest-block').style.display = tipo==='festivo' ? 'block' : 'none';
+    document.getElementById('baja-block').style.display = tipo==='baja' ? 'block' : 'none';
+    document.getElementById('permiso-block').style.display = tipo==='permiso' ? 'block' : 'none';
+    document.getElementById('huelga-block').style.display = tipo==='huelga' ? 'block' : 'none';
+    recalcRegistro();
+  }
+  document.querySelectorAll('.tipo-dia-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ setTipoUI(btn.getAttribute('data-tipo')); });
+  });
+
+  function tramosResumen(tramos){
+    return (tramos||[]).filter(function(t){return t.entrada&&t.salida;}).map(function(t){return t.entrada+' a '+t.salida;}).join(' y ');
+  }
+  function updateRegStatusText(iso){
+    var el = document.getElementById('reg-status-text');
+    var entry = state.entries[iso];
+    if(isFestivo(iso)){
+      el.textContent = 'Festivo — no cuenta jornada este día.';
+      return;
+    }
+    if(entry){
+      if(entry.tipo==='vacaciones'){ el.textContent = 'Marcado como vacaciones.'; return; }
+      if(entry.tipo==='baja'){ el.textContent = 'Marcado como baja.'; return; }
+      if(entry.tipo==='permiso'){ el.textContent = 'Permiso: '+(MOTIVOS_PERMISO[entry.permisoMotivo]?MOTIVOS_PERMISO[entry.permisoMotivo].label:'otro'); return; }
+      if(entry.tipo==='huelga'){ el.textContent = 'Marcado como huelga.'; return; }
+      if(entry.tipo==='medico'){ el.textContent = 'Marcado como médico ('+(entry.medicoSubtipo==='acompanar'?'acompañar familiar':'consulta propia')+').'; return; }
+      el.textContent = 'Fichado: '+tramosResumen(entry.tramos);
+      return;
+    }
+    var teorica = jornadaTeoricaDia(iso);
+    if(teorica<=0){ el.textContent = 'Sin jornada exigida este día.'; return; }
+    var synth = synthesizeTramosForDay(teorica);
+    el.textContent = 'Horario por defecto: '+tramosResumen(synth)+' (sin fichar todavía)';
+  }
+  function renderRegistro(){
+    var iso = regCurrentDate;
+    var d = fromISO(iso);
+    document.getElementById('reg-dow').textContent = DOW_FULL[d.getDay()];
+    document.getElementById('reg-daynum').textContent = pad2(d.getDate())+'/'+pad2(d.getMonth()+1);
+    document.getElementById('reg-badge-hoy').style.visibility = (iso===todayISO()) ? 'visible' : 'hidden';
+    document.getElementById('reg-date-input').value = iso;
+    updateRegStatusText(iso);
+
+    var entry = state.entries[iso];
+    var tipo = isFestivo(iso) ? 'festivo' : (entry ? (entry.tipo||'normal') : 'normal');
+    setTipoUI(tipo);
+
+    var tramosNormal = entry && tipo==='normal' ? entry.tramos : (entry ? null : state.defecto.tramos);
+    renderTramosInto('tramos-list', tramosNormal, recalcRegistro);
+
+    document.getElementById('med-subtipo').value = entry && entry.medicoSubtipo ? entry.medicoSubtipo : 'propia';
+    document.getElementById('med-horas').value = entry && entry.medicoHoras!=null ? entry.medicoHoras : Math.round(jornadaTeoricaDia(iso)*100)/100;
+    renderTramosInto('med-tramos-list', entry && tipo==='medico' ? entry.tramos : [], recalcRegistro);
+
+    document.getElementById('baja-subtipo').value = entry && entry.bajaSubtipo ? entry.bajaSubtipo : 'comun';
+    document.getElementById('baja-hospitalizacion').checked = !!(entry && entry.bajaHospitalizacion);
+
+    document.getElementById('permiso-motivo').value = entry && entry.permisoMotivo ? entry.permisoMotivo : 'otroRetribuido';
+    updatePermisoInfo();
+
+    document.getElementById('btn-eliminar-dia').style.display = (entry || isFestivo(iso)) ? 'block' : 'none';
+    recalcRegistro();
+  }
+
+  document.getElementById('btn-editar-toggle').addEventListener('click', function(){
+    var panel = document.getElementById('editar-dia-panel');
+    var open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    this.innerHTML = open ? 'Editar este día &#9662;' : 'Ocultar edición &#9652;';
+  });
+
+  document.getElementById('btn-day-prev').addEventListener('click', function(){ regCurrentDate=addDaysISO(regCurrentDate,-1); renderRegistro(); });
+  document.getElementById('btn-day-next').addEventListener('click', function(){ regCurrentDate=addDaysISO(regCurrentDate,1); renderRegistro(); });
+  document.getElementById('reg-date-center').addEventListener('click', function(){
+    var inp = document.getElementById('reg-date-input');
+    if(inp.showPicker){ try{ inp.showPicker(); }catch(e){ inp.focus(); } } else { inp.focus(); }
+  });
+  document.getElementById('reg-date-input').addEventListener('change', function(e){
+    if(e.target.value){ regCurrentDate = e.target.value; renderRegistro(); }
+  });
+  document.getElementById('btn-add-tramo').addEventListener('click', function(){
+    var current=readTramosFrom('tramos-list');
+    if(current.length>=3) return;
+    current.push({entrada:'',salida:''});
+    renderTramosInto('tramos-list', current, recalcRegistro);
+    recalcRegistro();
+  });
+  document.getElementById('btn-add-tramo-med').addEventListener('click', function(){
+    var current=readTramosFrom('med-tramos-list');
+    if(current.length>=2) return;
+    current.push({entrada:'',salida:''});
+    renderTramosInto('med-tramos-list', current, recalcRegistro);
+    recalcRegistro();
+  });
+  document.getElementById('med-subtipo').addEventListener('change', recalcRegistro);
+  document.getElementById('med-horas').addEventListener('input', recalcRegistro);
+  (function populatePermisoSelect(){
+    var sel = document.getElementById('permiso-motivo');
+    Object.keys(MOTIVOS_PERMISO).forEach(function(key){
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = MOTIVOS_PERMISO[key].label;
+      sel.appendChild(opt);
+    });
+  })();
+  function updatePermisoInfo(){
+    var motivo = document.getElementById('permiso-motivo').value;
+    var cfg = MOTIVOS_PERMISO[motivo] || MOTIVOS_PERMISO.otroRetribuido;
+    document.getElementById('permiso-info').textContent = cfg.info + (cfg.retribuido ? ' Cuenta para el Plus de Asistencia.' : '');
+  }
+  document.getElementById('permiso-motivo').addEventListener('change', updatePermisoInfo);
+  document.getElementById('btn-restaurar-defecto').addEventListener('click', function(){
+    renderTramosInto('tramos-list', JSON.parse(JSON.stringify(state.defecto.tramos)), recalcRegistro);
+    recalcRegistro();
+  });
+  function guardarJornada(){
+    if(!state.festivos) state.festivos = [];
+    var wasFestivo = state.festivos.indexOf(regCurrentDate) > -1;
+    if(regTipo==='festivo'){
+      if(!wasFestivo) state.festivos.push(regCurrentDate);
+      delete state.entries[regCurrentDate];
+      saveState();
+      document.getElementById('btn-eliminar-dia').style.display='block';
+      updateRegStatusText(regCurrentDate);
+      showToast('Guardado ✓');
+      attemptShareBackup();
+      return true;
+    }
+    if(wasFestivo){ state.festivos = state.festivos.filter(function(f){return f!==regCurrentDate;}); }
+    var entry = { tipo: regTipo };
+    if(regTipo==='normal'){
+      var tramos = readTramosFrom('tramos-list').filter(function(t){return t.entrada&&t.salida;});
+      if(tramos.length===0){ showToast('Indica entrada y salida'); return false; }
+      entry.tramos = tramos;
+    } else if(regTipo==='vacaciones'){
+      entry.tramos = [];
+    } else if(regTipo==='baja'){
+      entry.tramos = [];
+      entry.bajaSubtipo = document.getElementById('baja-subtipo').value;
+      entry.bajaHospitalizacion = document.getElementById('baja-hospitalizacion').checked;
+    } else if(regTipo==='permiso'){
+      entry.tramos = [];
+      entry.permisoMotivo = document.getElementById('permiso-motivo').value;
+    } else if(regTipo==='huelga'){
+      entry.tramos = [];
+    } else if(regTipo==='medico'){
+      entry.medicoSubtipo = document.getElementById('med-subtipo').value;
+      entry.medicoHoras = parseNum(document.getElementById('med-horas').value);
+      entry.tramos = readTramosFrom('med-tramos-list').filter(function(t){return t.entrada&&t.salida;});
+    }
+    state.entries[regCurrentDate] = entry;
+    saveState();
+    document.getElementById('btn-eliminar-dia').style.display='block';
+    updateRegStatusText(regCurrentDate);
+    showToast('Guardado ✓');
+    attemptShareBackup();
+    return true;
+  }
+  document.getElementById('btn-guardar').addEventListener('click', guardarJornada);
+  document.getElementById('btn-fichar-salida').addEventListener('click', function(){
+    if(regTipo!=='normal') setTipoUI('normal');
+    var cards = document.querySelectorAll('#tramos-list .tramo-card');
+    if(cards.length===0){ renderTramosInto('tramos-list', JSON.parse(JSON.stringify(state.defecto.tramos)), recalcRegistro); cards = document.querySelectorAll('#tramos-list .tramo-card'); }
+    var lastCard = cards[cards.length-1];
+    lastCard.querySelector('.tout').value = nowHM();
+    recalcRegistro();
+    guardarJornada();
+  });
+  document.getElementById('btn-eliminar-dia').addEventListener('click', function(){
+    delete state.entries[regCurrentDate];
+    if(state.festivos){ state.festivos = state.festivos.filter(function(f){return f!==regCurrentDate;}); }
+    saveState();
+    renderRegistro();
+    showToast('Eliminado');
+  });
+
+  /* ================= VACACIONES ================= */
+  function vacYearConfig(year){
+    var y = String(year);
+    if(!state.vacaciones.porAno[y]) state.vacaciones.porAno[y] = { asignados:24, compensados:0, limiteAcompanar:26 };
+    if(state.vacaciones.porAno[y].limiteAcompanar==null) state.vacaciones.porAno[y].limiteAcompanar = 26;
+    return state.vacaciones.porAno[y];
+  }
+  function vacDisfrutadosEnAno(year){
+    var count=0;
+    Object.keys(state.entries).forEach(function(iso){
+      if(iso.slice(0,4)===String(year) && (state.entries[iso].tipo)==='vacaciones') count++;
+    });
+    return count;
+  }
+  function vacSaldoAcumuladoHasta(year){
+    var years = Object.keys(state.vacaciones.porAno).map(Number).filter(function(y){return y<=year;}).sort(function(a,b){return a-b;});
+    if(years.length===0 || years[years.length-1]!==year) years.push(year);
+    var saldo = 0;
+    years.forEach(function(y){
+      var cfg = vacYearConfig(y);
+      var disfrutados = vacDisfrutadosEnAno(y);
+      saldo += cfg.asignados - disfrutados - cfg.compensados;
+    });
+    return saldo;
+  }
+  function acompanarHorasEnAno(year){
+    var total=0;
+    Object.keys(state.entries).forEach(function(iso){
+      var e = state.entries[iso];
+      if(iso.slice(0,4)===String(year) && e.tipo==='medico' && e.medicoSubtipo==='acompanar'){
+        total += e.medicoHoras || 0;
+      }
+    });
+    return total;
+  }
+
+  /* ================= LISTADO ================= */
+  var listadoMonth = monthKey(todayISO());
+
+  function mostRecentMonthWithData(){
+    var keys = Object.keys(state.entries);
+    if(!keys.length) return null;
+    keys.sort();
+    return monthKey(keys[keys.length-1]);
+  }
+
+  function diasDelMes(ym){
+    var range = monthDaysRange(ym);
+    var end = range[1] < todayISO() ? range[1] : todayISO();
+    var days = [];
+    if(end < range[0]) return days;
+    var cur = range[0];
+    while(cur<=end){
+      var info = diaInfo(cur);
+      if(info) days.push(info);
+      cur = addDaysISO(cur,1);
+    }
+    return days;
+  }
+
+  function tramosTexto(tramos){
+    return (tramos||[]).filter(function(t){return t.entrada&&t.salida;}).map(function(t){return t.entrada+'-'+t.salida;}).join(', ');
+  }
+
+  function renderListado(){
+    document.getElementById('listado-month-label').textContent = monthLabel(listadoMonth);
+    var dias = diasDelMes(listadoMonth);
+    var totalTrabajadas=0, totalExtra=0;
+    dias.forEach(function(d){ totalTrabajadas+=d.trabajadas; totalExtra+= (d.tipo==='normal'||d.tipo==='medico') ? d.horasExtra : 0; });
+
+    var year = parseInt(listadoMonth.slice(0,4),10);
+    document.getElementById('vac-saldo').textContent = vacSaldoAcumuladoHasta(year);
+    var vacCfg = vacYearConfig(year);
+    document.getElementById('med-acompanar-saldo').textContent = fmtHM(acompanarHorasEnAno(year)).replace(' h','');
+    document.getElementById('med-acompanar-limite').textContent = vacCfg.limiteAcompanar;
+
+    var range = monthDaysRange(listadoMonth);
+    var lastDay = fromISO(range[1]).getDate();
+    var firstDow = (fromISO(range[0]).getDay()+6)%7; // 0=Mon...6=Sun
+    var today = todayISO();
+    var gridHTML = '';
+    for(var i=0;i<firstDow;i++){ gridHTML += '<div class="cal-cell empty"></div>'; }
+    for(var day=1; day<=lastDay; day++){
+      var iso = listadoMonth+'-'+pad2(day);
+      var isFuture = iso>today;
+      var info = isFuture ? null : diaInfo(iso);
+      var dow = fromISO(iso).getDay();
+      var cls = 'cal-cell';
+      if(iso===today) cls += ' today';
+      if(isFuture) cls += ' future';
+      var inner = '<span class="cal-daynum">'+day+'</span>';
+      if(info){
+        cls += info.auto ? ' day-auto' : ' day-manual';
+        if(info.tipo==='vacaciones'){
+          cls += ' vac';
+          inner += '<span class="cal-delta">&#127796;</span><span class="cal-sublabel">Vac.</span>';
+        } else if(info.tipo==='baja'){
+          cls += ' baja';
+          inner += '<span class="cal-delta">&#129658;</span><span class="cal-sublabel">Baja</span>';
+        } else if(info.tipo==='permiso'){
+          cls += info.permisoRetribuido ? ' permiso-si' : ' permiso-no';
+          inner += '<span class="cal-delta">'+(info.permisoRetribuido?'&#128203;':'&#9995;')+'</span><span class="cal-sublabel">'+(info.permisoRetribuido?'Permiso':'S/sueldo')+'</span>';
+        } else if(info.tipo==='huelga'){
+          cls += ' permiso-no';
+          inner += '<span class="cal-delta">&#9995;</span><span class="cal-sublabel">Huelga</span>';
+        } else if(info.tipo==='medico'){
+          cls += info.medSubtipo==='acompanar' ? ' med-acompanar' : ' med-propia';
+          var medDeltaClass = info.horasExtra>0.004 ? 'positive' : 'neutral';
+          inner += '<span class="cal-delta '+medDeltaClass+'">'+fmtCompactExtra(info.horasExtra)+'</span>'+
+                   '<span class="cal-sublabel">'+(info.medSubtipo==='acompanar'?'Acomp.':'Médico')+'</span>';
+        } else {
+          var deltaClass = info.horasExtra>0.004?'positive':'neutral';
+          inner += '<span class="cal-delta '+deltaClass+'">'+fmtCompactExtra(info.horasExtra)+'</span>';
+        }
+      } else if(!isFuture && dow===6){
+        cls += ' nonwork-sat';
+      } else if(!isFuture && (dow===0 || isFestivo(iso))){
+        cls += ' nonwork-rest';
+      }
+      gridHTML += '<div class="'+cls+'" data-date="'+iso+'">'+inner+'</div>';
+    }
+    var gridEl = document.getElementById('cal-grid');
+    gridEl.innerHTML = gridHTML;
+    gridEl.querySelectorAll('.cal-cell:not(.empty):not(.future)').forEach(function(c){
+      c.addEventListener('click', function(){ regCurrentDate = c.getAttribute('data-date'); switchToView('registro'); });
+    });
+
+    document.getElementById('stat-trabajadas').textContent = fmtHM(totalTrabajadas);
+    var extraEl = document.getElementById('stat-extra');
+    extraEl.textContent = (totalExtra>0.004?'+':'')+fmtHM(totalExtra);
+    extraEl.className = 'stat-value ' + (totalExtra>0.004?'positive':(totalExtra<-0.004?'negative':''));
+
+    var printBtn = document.getElementById('btn-print-listado');
+    if(dias.length===0){ printBtn.disabled = true; printBtn.innerHTML = '&#128424; Sin jornadas que imprimir'; }
+    else { printBtn.disabled = false; printBtn.innerHTML = '&#128424; Imprimir / PDF'; }
+  }
+  document.getElementById('btn-month-prev').addEventListener('click', function(){ listadoMonth=addMonths(listadoMonth,-1); renderListado(); });
+  document.getElementById('btn-month-next').addEventListener('click', function(){ listadoMonth=addMonths(listadoMonth,1); renderListado(); });
+
+  /* ================= NOMINA ================= */
+  var extraMonth = monthKey(todayISO());
+
+  function computeExtraForMonth(ym){
+    var range = extraPeriodRange(ym);
+    var end = range[1] < todayISO() ? range[1] : todayISO();
+    var cur = range[0];
+    var totalHorasExtra=0, importeExtra=0;
+    var dias=[];
+    while(cur<=end){
+      var info = diaInfo(cur);
+      if(info && (info.tipo==='normal' || info.tipo==='medico') && info.horasExtra>0.004){
+        var horasRedondeadas = roundHalf(info.horasExtra);
+        var dow = fromISO(cur).getDay();
+        var cond = findCondForDate(cur);
+        var precio = dow===6 ? cond.precioHoraExtraSab : cond.precioHoraExtraLV;
+        var importe = horasRedondeadas*precio;
+        totalHorasExtra += horasRedondeadas;
+        importeExtra += importe;
+        dias.push({iso:cur, info:info, horasRedondeadas:horasRedondeadas, precio:precio, importe:importe});
+      } else if(info){
+        dias.push({iso:cur, info:info, horasRedondeadas:0, precio:0, importe:0});
+      }
+      cur = addDaysISO(cur,1);
+    }
+    return { range:range, totalHorasExtra:totalHorasExtra, importeExtra:importeExtra, dias:dias };
+  }
+
+  function mesOverride(ym){
+    if(!state.mesOverrides) state.mesOverrides = {};
+    if(!state.mesOverrides[ym]) state.mesOverrides[ym] = {};
+    return state.mesOverrides[ym];
+  }
+  function renderExtra(){
+    document.getElementById('extra-month-label').textContent = monthLabel(extraMonth);
+    var mrange = monthDaysRange(extraMonth);
+    var cond = findCondForDate(mrange[1]);
+    var diasMes = diasDelMes(extraMonth);
+    var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
+    var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
+    var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='huelga' || (d.tipo==='permiso' && !d.permisoRetribuido); });
+    var totalDiasMes = fromISO(mrange[1]).getDate();
+    var diasSinSueldo = diasBaja.length + diasNoRetribuidos.length;
+    var factorPresencia = diasSinSueldo>0 ? Math.max(0, (totalDiasMes-diasSinSueldo)/totalDiasMes) : 1;
+    var subsidioBaja = diasBaja.reduce(function(s,d){ return s+(d.bajaSubsidio||0); }, 0);
+
+    var extraInfo = computeExtraForMonth(extraMonth);
+    var ov = mesOverride(extraMonth);
+
+    var salarioBase = cond.salarioBase * factorPresencia;
+    var compPersonal = cond.compPersonal * factorPresencia;
+    var plusAsistencia = diasConPlus * cond.plusAsistenciaDia;
+    var gratifVoluntaria = cond.gratifVoluntariaBase + extraInfo.importeExtra;
+    var totalDevengado = salarioBase + compPersonal + plusAsistencia + gratifVoluntaria + subsidioBaja;
+
+    var prorrataAuto = Math.round((totalDevengado/6)*100)/100;
+    var prorrata = ov.prorrata!=null ? ov.prorrata : prorrataAuto;
+    var irpfPct = ov.irpf!=null ? ov.irpf : cond.pctIRPF;
+
+    var bcConCom = totalDevengado + prorrata;
+    var dContComunes = bcConCom * cond.pctContComunes/100;
+    var dDesempleo = bcConCom * cond.pctDesempleo/100;
+    var dFormProf = bcConCom * cond.pctFormProf/100;
+    var dIRPF = totalDevengado * irpfPct/100;
+    var totalDeducido = dContComunes+dDesempleo+dFormProf+dIRPF;
+    var liquido = totalDevengado - totalDeducido;
+
+    document.getElementById('extra-head-sub').textContent = diasMes.length ? (diasMes.length+' días registrados') : 'Sin datos este mes';
+
+    var body='';
+    if(diasMes.length===0){
+      body = '<div class="payslip-row" style="justify-content:center;color:var(--muted);">Sin jornadas registradas este mes.</div>';
+    } else {
+      body += '<div class="payslip-row"><span>Salario Base'+(diasSinSueldo?' ('+(totalDiasMes-diasSinSueldo)+'/'+totalDiasMes+' días)':'')+'</span><span class="val">'+fmtEUR(salarioBase)+'</span></div>';
+      body += '<div class="payslip-row"><span>Comp. Personal'+(diasSinSueldo?' ('+(totalDiasMes-diasSinSueldo)+'/'+totalDiasMes+' días)':'')+'</span><span class="val">'+fmtEUR(compPersonal)+'</span></div>';
+      body += '<div class="payslip-row"><span>Plus Asistencia ('+diasConPlus+' &times; '+fmtEUR(cond.plusAsistenciaDia)+')</span><span class="val">'+fmtEUR(plusAsistencia)+'</span></div>';
+      body += '<div class="payslip-row"><span>Gratif. Voluntaria (+'+fmtHM(extraInfo.totalHorasExtra).replace(' h','')+'h extra)</span><span class="val">'+fmtEUR(gratifVoluntaria)+'</span></div>';
+      if(diasBaja.length){
+        body += '<div class="payslip-row"><span>Subsidio IT ('+diasBaja.length+' días de baja)</span><span class="val">'+fmtEUR(subsidioBaja)+'</span></div>';
+      }
+      if(diasNoRetribuidos.length){
+        body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">'+diasNoRetribuidos.length+' día(s) de huelga / permiso sin sueldo, sin devengo.</div>';
+      }
+      body += '<div class="payslip-row subtotal"><span>Total devengado</span><span class="val">'+fmtEUR(totalDevengado)+'</span></div>';
+      body += '<div class="payslip-row section">Deducciones</div>';
+      body += '<div class="payslip-editable-row"><span>Prorrata pagas extra (devengado &divide; 6)</span><input class="payslip-input" id="extra-prorrata-input" value="'+fmtEUR(prorrata)+'"></div>';
+      body += '<div class="payslip-row deduct"><span>Cont. Comunes ('+fmtH(cond.pctContComunes)+'%)</span><span class="val">&minus;'+fmtEUR(dContComunes)+'</span></div>';
+      body += '<div class="payslip-row deduct"><span>Desempleo ('+fmtH(cond.pctDesempleo)+'%)</span><span class="val">&minus;'+fmtEUR(dDesempleo)+'</span></div>';
+      body += '<div class="payslip-row deduct"><span>Form. Profesional ('+fmtH(cond.pctFormProf)+'%)</span><span class="val">&minus;'+fmtEUR(dFormProf)+'</span></div>';
+      body += '<div class="payslip-editable-row"><span>% IRPF este mes</span><input class="payslip-input" id="extra-irpf-input" value="'+fmtH(irpfPct)+'"></div>';
+      body += '<div class="payslip-row deduct"><span>Importe IRPF</span><span class="val">&minus;'+fmtEUR(dIRPF)+'</span></div>';
+      body += '<div class="payslip-row total"><span>Líquido estimado</span><span class="val">'+fmtEUR(liquido)+'</span></div>';
+      if(diasBaja.length){
+        body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">El subsidio de IT es una estimación (base reguladora configurable en Ajustes). Verifica contra tu nómina real.</div>';
+      }
+    }
+    document.getElementById('extra-body').innerHTML = body;
+
+    if(diasMes.length>0){
+      document.getElementById('extra-prorrata-input').addEventListener('change', function(e){
+        mesOverride(extraMonth).prorrata = parseNum(e.target.value);
+        saveState(); renderExtra();
+      });
+      document.getElementById('extra-irpf-input').addEventListener('change', function(e){
+        mesOverride(extraMonth).irpf = parseNum(e.target.value);
+        saveState(); renderExtra();
+      });
+    }
+
+    var revisadoBtn = document.getElementById('btn-revisada');
+    var isRevisada = !!(state.nominasRevisadas && state.nominasRevisadas[extraMonth]);
+    revisadoBtn.classList.toggle('revisada', isRevisada);
+    revisadoBtn.innerHTML = isRevisada ? '&#10003; Nómina revisada' : 'Marcar como revisada';
+
+    var printBtn = document.getElementById('btn-print-extra');
+    if(diasMes.length===0){ printBtn.disabled = true; printBtn.innerHTML = '&#128424; Sin datos que imprimir'; }
+    else { printBtn.disabled = false; printBtn.innerHTML = '&#128424; Imprimir / PDF'; }
+
+    return { cond:cond, salarioBase:salarioBase, compPersonal:compPersonal, plusAsistencia:plusAsistencia, diasConPlus:diasConPlus,
+      gratifVoluntaria:gratifVoluntaria, subsidioBaja:subsidioBaja, diasBaja:diasBaja.length, extraInfo:extraInfo, totalDevengado:totalDevengado, prorrata:prorrata, irpfPct:irpfPct,
+      dContComunes:dContComunes, dDesempleo:dDesempleo, dFormProf:dFormProf, dIRPF:dIRPF, totalDeducido:totalDeducido, liquido:liquido,
+      diasMes:diasMes };
+  }
+  document.getElementById('btn-extra-month-prev').addEventListener('click', function(){ extraMonth=addMonths(extraMonth,-1); renderExtra(); });
+  document.getElementById('btn-extra-month-next').addEventListener('click', function(){ extraMonth=addMonths(extraMonth,1); renderExtra(); });
+  document.getElementById('btn-revisada').addEventListener('click', function(){
+    if(!state.nominasRevisadas) state.nominasRevisadas = {};
+    state.nominasRevisadas[extraMonth] = !state.nominasRevisadas[extraMonth];
+    saveState();
+    renderExtra();
+    showToast(state.nominasRevisadas[extraMonth] ? 'Marcada como revisada ✓' : 'Marca quitada');
+  });
+
+  /* ================= IMPRESION ================= */
+  function printWithFilename(filename, printFn){
+    var originalTitle = document.title;
+    document.title = filename;
+    printFn();
+    setTimeout(function(){ document.title = originalTitle; }, 800);
+  }
+
+  var STANDALONE_REPORT_CSS =
+    "body{background:#fff;color:#1B1E1A;font-family:'Inter',system-ui,-apple-system,sans-serif;padding:14px 16px;font-size:13px;margin:0;}"+
+    ".pr-topline{display:flex;justify-content:space-between;border-bottom:2px solid #20242A;padding-bottom:8px;margin-bottom:8px;}"+
+    ".pr-company-name{color:#20242A;font-weight:700;font-size:16px;margin:0 0 2px;}"+
+    ".pr-company-addr{color:#20242A;font-size:11px;margin:0;}"+
+    ".pr-worker-block{text-align:right;font-size:12px;}"+
+    ".pr-worker-block p{margin:0 0 2px;font-weight:600;}"+
+    ".pr-title{text-align:center;font-size:15px;color:#20242A;letter-spacing:0.03em;margin:8px 0;font-weight:700;}"+
+    "table.pr-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px;}"+
+    ".pr-meta-table td{border:1px solid #20242A;padding:5px 8px;}"+
+    ".pr-meta-table .pr-label{background:#DADED4;color:#20242A;font-weight:700;width:120px;}"+
+    ".pr-concepts th, .pr-concepts td{border:1px solid #20242A;padding:5px 8px;text-align:right;}"+
+    ".pr-concepts th{background:#DADED4;color:#20242A;text-transform:uppercase;font-size:10px;}"+
+    ".pr-concepts td:first-child, .pr-concepts th:first-child{text-align:left;}"+
+    ".pr-concepts .pr-subtotal{background:#DADED4;font-weight:700;}"+
+    ".pr-liquido{text-align:right;font-size:16px;font-weight:700;color:#20242A;border-top:2px solid #20242A;padding-top:8px;margin:0 0 14px;}"+
+    ".pr-grid{width:100%;border-collapse:collapse;}"+
+    ".pr-grid th,.pr-grid td{border:1px solid #20242A;padding:5px 6px;text-align:center;font-size:11px;}"+
+    ".pr-grid th{background:#DADED4;color:#20242A;text-transform:uppercase;font-size:10px;}"+
+    ".pr-grid td:last-child,.pr-grid th:last-child{text-align:left;}"+
+    ".pr-grid tr.pr-total{background:#EDE0D5;font-weight:700;}"+
+    ".pr-grid .pos{color:#96461A;}"+
+    ".pr-grid .neg{color:#963A2F;}"+
+    ".pr-footnote{font-size:10.5px;color:#726C5D;border-top:1px dashed #ccc;padding-top:8px;margin-top:14px;}";
+
+  function shareReportAsFile(containerId, filenameBase, title){
+    var content = document.getElementById(containerId).innerHTML;
+    var fullHtml = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escapeHTML(title)+'</title><style>'+STANDALONE_REPORT_CSS+'</style></head><body>'+content+'</body></html>';
+    var blob = new Blob([fullHtml], {type:'text/html'});
+    var filename = filenameBase+'.html';
+    try{
+      var file = new File([blob], filename, {type:'text/html'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:title}).catch(function(err){
+          if(err && err.name!=='AbortError'){ openReportFallback(blob, filename); }
+        });
+        return;
+      }
+    }catch(e){}
+    openReportFallback(blob, filename);
+  }
+  function openReportFallback(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var opened = null;
+    try{ opened = window.open(url, '_blank'); }catch(e){}
+    if(opened){
+      showToast('Informe abierto en otra pestaña');
+    } else {
+      showToast('Descargando informe...');
+      fallbackDownload(blob, filename);
+    }
+  }
+
+  function buildListadoReport(){
+    var dias = diasDelMes(listadoMonth);
+    if(!dias.length) return false;
+    var totalT=0, totalE=0;
+    var body='';
+    dias.forEach(function(d){
+      var dt = fromISO(d.iso);
+      totalT+=d.trabajadas;
+      var tipoLabel = (d.tipo==='vacaciones'?'Vacaciones':(d.tipo==='baja'?'Baja':(d.tipo==='huelga'?'Huelga':(d.tipo==='permiso'?('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')):(d.tipo==='medico'?('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')):'Normal'))))) + (d.auto?' (auto)':'');
+      var cls='', sign='', diffTxt='—';
+      if(d.tipo==='normal' || d.tipo==='medico'){
+        totalE+=d.horasExtra;
+        cls = d.horasExtra>0.004?'pos':'';
+        sign = d.horasExtra>0.004?'+':'';
+        diffTxt = d.horasExtra>0.004 ? sign+fmtHM(d.horasExtra) : '0:00';
+      }
+      body += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+tipoLabel+'</td><td>'+escapeHTML(tramosTexto(d.tramos))+'</td><td>'+fmtHM(d.trabajadas)+'</td><td>'+fmtHM(d.teorica)+'</td><td class="'+cls+'">'+diffTxt+'</td></tr>';
+    });
+    body += '<tr class="pr-total"><td colspan="3">TOTAL</td><td>'+fmtHM(totalT)+'</td><td></td><td>'+(totalE>0.004?'+':'')+fmtHM(totalE)+'</td></tr>';
+    document.getElementById('pl-title').textContent = 'Horas — '+monthLabel(listadoMonth);
+    document.getElementById('pl-sub').textContent = state.perfil.nombre||'';
+    document.getElementById('pl-body').innerHTML = body;
+    document.getElementById('print-nomina').classList.remove('print-active');
+    document.getElementById('print-listado').classList.add('print-active');
+    return true;
+  }
+
+  function buildExtraReport(){
+    var data = renderExtra();
+    if(!data.diasMes.length) return false;
+    document.getElementById('pn-empresa').textContent = (state.empresa.nombre||'').toUpperCase();
+    document.getElementById('pn-empresa-nss').textContent = 'Nº S.S.: '+(state.empresa.nss||'');
+    document.getElementById('pn-nombre').textContent = (state.perfil.nombre||'').toUpperCase();
+    document.getElementById('pn-cat').textContent = state.perfil.categoria||'';
+    document.getElementById('pn-title').textContent = 'Nómina estimada — '+monthLabel(extraMonth);
+    document.getElementById('pn-dni').textContent = state.perfil.dni||'';
+    document.getElementById('pn-npers').textContent = state.perfil.nPersonal||'';
+    document.getElementById('pn-nafil').textContent = state.perfil.nAfilSS||'';
+    document.getElementById('pn-periodo').textContent = fechaEspanola(data.extraInfo.range[0])+' a '+fechaEspanola(data.extraInfo.range[1]);
+
+    var b='';
+    b += '<tr><td>Salario Base</td><td>'+fmtEUR(data.salarioBase)+'</td></tr>';
+    b += '<tr><td>Comp. Personal</td><td>'+fmtEUR(data.compPersonal)+'</td></tr>';
+    b += '<tr><td>Plus Asistencia ('+data.diasConPlus+' d&iacute;as)</td><td>'+fmtEUR(data.plusAsistencia)+'</td></tr>';
+    b += '<tr><td>Gratif. Voluntaria</td><td>'+fmtEUR(data.gratifVoluntaria)+'</td></tr>';
+    b += '<tr class="pr-subtotal"><td>Total devengado</td><td>'+fmtEUR(data.totalDevengado)+'</td></tr>';
+    b += '<tr><td>Cont. Comunes</td><td>&minus;'+fmtEUR(data.dContComunes)+'</td></tr>';
+    b += '<tr><td>Desempleo</td><td>&minus;'+fmtEUR(data.dDesempleo)+'</td></tr>';
+    b += '<tr><td>Form. Profesional</td><td>&minus;'+fmtEUR(data.dFormProf)+'</td></tr>';
+    b += '<tr><td>IRPF</td><td>&minus;'+fmtEUR(data.dIRPF)+'</td></tr>';
+    document.getElementById('pn-body').innerHTML = b;
+    document.getElementById('pn-foot').innerHTML = '';
+    document.getElementById('pn-liquido').textContent = fmtEUR(data.liquido);
+
+    var fb='';
+    data.extraInfo.dias.forEach(function(d){
+      var dt = fromISO(d.iso);
+      var cls = d.horasRedondeadas>0.004?'pos':'';
+      fb += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+escapeHTML(tramosTexto(d.info.tramos))+'</td><td>'+fmtHM(d.info.trabajadas)+'</td><td>'+fmtHM(d.info.teorica)+'</td><td class="'+cls+'">'+(d.horasRedondeadas>0.004?'+'+fmtHM(d.horasRedondeadas):'—')+'</td></tr>';
+    });
+    document.getElementById('pn-fichajes').innerHTML = fb;
+
+    document.getElementById('print-listado').classList.remove('print-active');
+    document.getElementById('print-nomina').classList.add('print-active');
+    return true;
+  }
+
+  document.getElementById('btn-print-listado').addEventListener('click', function(){
+    if(!buildListadoReport()){ showToast('No hay jornadas este mes para imprimir'); return; }
+    var p = listadoMonth.split('-').map(Number);
+    var filename = MESES[p[1]-1]+'-'+String(p[0]).slice(-2)+'-horas';
+    printWithFilename(filename, function(){ window.print(); });
+  });
+  document.getElementById('btn-share-listado').addEventListener('click', function(){
+    if(!buildListadoReport()){ showToast('No hay jornadas este mes para compartir'); return; }
+    var p = listadoMonth.split('-').map(Number);
+    var filename = MESES[p[1]-1]+'-'+String(p[0]).slice(-2)+'-horas';
+    shareReportAsFile('print-listado', filename, 'Horas — '+monthLabel(listadoMonth));
+  });
+
+  document.getElementById('btn-print-extra').addEventListener('click', function(){
+    if(!buildExtraReport()){ showToast('No hay datos en este periodo'); return; }
+    var p = extraMonth.split('-').map(Number);
+    var filename = 'Nomina-'+MESES[p[1]-1]+'-'+String(p[0]).slice(-2);
+    printWithFilename(filename, function(){ window.print(); });
+  });
+  document.getElementById('btn-share-extra').addEventListener('click', function(){
+    if(!buildExtraReport()){ showToast('No hay datos en este periodo'); return; }
+    var p = extraMonth.split('-').map(Number);
+    var filename = 'Nomina-'+MESES[p[1]-1]+'-'+String(p[0]).slice(-2);
+    shareReportAsFile('print-nomina', filename, 'Nómina estimada — '+monthLabel(extraMonth));
+  });
+
+  /* ================= AJUSTES: CONDICIONES ================= */
+  function tarifaCardHTML(cond, isActual){
+    return '<div class="tarifa-card" data-id="'+cond.id+'">'+
+      '<div class="tarifa-header">'+
+        '<div class="tarifa-vigencia"><label>Vigente desde</label><input type="date" class="text-input date-input tarifa-vigente" style="width:135px;" value="'+cond.vigenteDesde+'"></div>'+
+        '<div class="tarifa-header-actions">'+
+          (isActual ? '<span class="tarifa-badge">Actual</span>' : '<button class="tramo-remove tarifa-remove">Eliminar</button>')+
+          '<button type="button" class="tarifa-toggle">&#9662;</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tarifa-body" style="display:none;">'+
+      '<div class="cond-subhead">Devengos fijos del mes</div>'+
+      '<div class="field-row"><label>Salario Base</label><input class="cond-f" data-f="salarioBase" value="'+fmtEUR(cond.salarioBase)+'"></div>'+
+      '<div class="field-row"><label>Comp. Personal</label><input class="cond-f" data-f="compPersonal" value="'+fmtEUR(cond.compPersonal)+'"></div>'+
+      '<div class="field-row"><label>Plus Asistencia (por día)</label><input class="cond-f" data-f="plusAsistenciaDia" value="'+fmtEUR(cond.plusAsistenciaDia)+'"></div>'+
+      '<div class="field-row"><label>Gratif. Voluntaria (base)</label><input class="cond-f" data-f="gratifVoluntariaBase" value="'+fmtEUR(cond.gratifVoluntariaBase)+'"></div>'+
+      '<div class="cond-subhead">Horas extra</div>'+
+      '<div class="field-row"><label>Precio hora L-V</label><input class="cond-f" data-f="precioHoraExtraLV" value="'+fmtEUR(cond.precioHoraExtraLV)+'"></div>'+
+      '<div class="field-row"><label>Precio hora sábado</label><input class="cond-f" data-f="precioHoraExtraSab" value="'+fmtEUR(cond.precioHoraExtraSab)+'"></div>'+
+      '<div class="cond-subhead">Baja (IT)</div>'+
+      '<div class="field-row"><label>Base reguladora (por día)</label><input class="cond-f" data-f="baseReguladoraDia" value="'+fmtEUR(cond.baseReguladoraDia)+'"></div>'+
+      '<p class="field-hint" style="margin-top:-6px;">Normalmente tu base de cotización del mes anterior &divide; 30. Por defecto se estima con el Salario Base.</p>'+
+      '<div class="cond-subhead">Deducciones</div>'+
+      '<p class="field-hint" style="margin-top:0;">La prorrata de pagas extra se calcula sola cada mes (lo devengado &divide; 6) y el % de IRPF se ajusta por mes — ambos editables directamente en la pestaña Nómina.</p>'+
+      '<div class="field-row"><label>% Cont. Comunes</label><input class="cond-f" data-f="pctContComunes" value="'+fmtH(cond.pctContComunes)+'"></div>'+
+      '<div class="field-row"><label>% Desempleo</label><input class="cond-f" data-f="pctDesempleo" value="'+fmtH(cond.pctDesempleo)+'"></div>'+
+      '<div class="field-row"><label>% Form. Profesional</label><input class="cond-f" data-f="pctFormProf" value="'+fmtH(cond.pctFormProf)+'"></div>'+
+      '<div class="field-row"><label>% IRPF (por defecto)</label><input class="cond-f" data-f="pctIRPF" value="'+fmtH(cond.pctIRPF)+'"></div>'+
+      '<div class="cond-subhead">Jornada exigida</div>'+
+      '<div class="field-row"><label>Tiempo por día (formato h:mm)</label><input class="cond-tiempodia" value="'+fmtHM(cond.tiempoPorDia).replace(' h','')+'"></div>'+
+      '<label class="check-row"><input type="checkbox" class="cond-viernes"'+(cond.viernesTardeLibre?' checked':'')+'> Viernes tarde libre (+30 min L-J, viernes 6:00)</label>'+
+      '<p class="field-hint" id="jornada-preview-'+cond.id+'" style="margin-top:8px;">'+jornadaPreviewText(cond)+'</p>'+
+      '</div>'+
+    '</div>';
+  }
+  function jornadaPreviewText(cond){
+    if(cond.viernesTardeLibre){
+      return 'L-J: '+fmtHM(cond.jornada['1']).replace(' h','')+' &middot; V: '+fmtHM(cond.jornada['5']).replace(' h','');
+    }
+    return 'L-V: '+fmtHM(cond.jornada['1']).replace(' h','');
+  }
+  function bindTarifaCardEvents(card){
+    var id = card.getAttribute('data-id');
+    function getC(){ return state.condiciones.find(function(c){return c.id===id;}); }
+    var toggleBtn = card.querySelector('.tarifa-toggle');
+    var body = card.querySelector('.tarifa-body');
+    toggleBtn.addEventListener('click', function(){
+      var open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      toggleBtn.innerHTML = open ? '&#9662;' : '&#9652;';
+    });
+    card.querySelector('.tarifa-vigente').addEventListener('change', function(e){
+      getC().vigenteDesde = e.target.value; saveState(); renderTarifas(); renderRegistro(); renderListado(); renderExtra();
+    });
+    card.querySelectorAll('.cond-f').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var f = inp.getAttribute('data-f');
+        getC()[f] = parseNum(inp.value);
+        inp.value = f.indexOf('pct')===0 ? fmtH(getC()[f]) : fmtEUR(getC()[f]);
+        saveState(); renderExtra();
+      });
+    });
+    function updateJornada(){
+      recomputeJornada(getC());
+      saveState();
+      var preview = card.querySelector('#jornada-preview-'+id);
+      if(preview) preview.innerHTML = jornadaPreviewText(getC());
+      renderRegistro(); renderListado(); renderExtra();
+    }
+    card.querySelector('.cond-tiempodia').addEventListener('change', function(e){
+      getC().tiempoPorDia = hmToDecimal(e.target.value);
+      e.target.value = fmtHM(getC().tiempoPorDia).replace(' h','');
+      updateJornada();
+    });
+    card.querySelector('.cond-viernes').addEventListener('change', function(e){
+      getC().viernesTardeLibre = e.target.checked;
+      updateJornada();
+    });
+    var rm = card.querySelector('.tarifa-remove');
+    if(rm){
+      rm.addEventListener('click', function(){
+        if(state.condiciones.length<=1) return;
+        state.condiciones = state.condiciones.filter(function(c){return c.id!==id;});
+        saveState(); renderTarifas(); renderRegistro(); renderListado(); renderExtra();
+      });
+    }
+  }
+  function renderTarifas(){
+    var list = document.getElementById('tarifas-list');
+    var sorted = state.condiciones.slice().sort(function(a,b){return b.vigenteDesde.localeCompare(a.vigenteDesde);});
+    list.innerHTML = sorted.map(function(c,i){return tarifaCardHTML(c, i===0);}).join('');
+    list.querySelectorAll('.tarifa-card').forEach(bindTarifaCardEvents);
+  }
+  document.getElementById('btn-add-tarifa').addEventListener('click', function(){
+    var latest = state.condiciones.slice().sort(function(a,b){return b.vigenteDesde.localeCompare(a.vigenteDesde);})[0];
+    var newCond = JSON.parse(JSON.stringify(latest));
+    newCond.id = 'c'+Date.now();
+    newCond.vigenteDesde = todayISO();
+    state.condiciones.push(newCond);
+    saveState();
+    renderTarifas();
+  });
+
+  /* ================= AJUSTES: HORARIO POR DEFECTO ================= */
+  document.getElementById('btn-add-tramo-defecto').addEventListener('click', function(){
+    if(state.defecto.tramos.length>=3) return;
+    state.defecto.tramos.push({entrada:'',salida:''});
+    saveState();
+    renderDefectoTramos();
+  });
+  function renderDefectoTramos(){
+    var list = document.getElementById('defecto-tramos-list');
+    list.innerHTML='';
+    state.defecto.tramos.forEach(function(t,i){
+      var wrap=document.createElement('div');
+      wrap.innerHTML = tramoCardHTML(t,i,state.defecto.tramos.length);
+      var card = wrap.firstElementChild;
+      list.appendChild(card);
+      card.querySelectorAll('input').forEach(function(inp){
+        inp.addEventListener('change', function(){
+          state.defecto.tramos[i].entrada = card.querySelector('.tin').value;
+          state.defecto.tramos[i].salida = card.querySelector('.tout').value;
+          saveState();
+        });
+      });
+      var rm = card.querySelector('.tramo-remove-x');
+      if(rm){
+        rm.addEventListener('click', function(){
+          if(state.defecto.tramos.length<=1) return;
+          state.defecto.tramos.splice(i,1);
+          saveState();
+          renderDefectoTramos();
+        });
+      }
+    });
+  }
+
+  /* ================= AJUSTES: VACACIONES ================= */
+  function renderVacaciones(){
+    var list = document.getElementById('vacaciones-list');
+    var years = Object.keys(state.vacaciones.porAno).sort();
+    if(years.length===0){
+      var y = new Date().getFullYear();
+      vacYearConfig(y);
+      years = [String(y)];
+    }
+    list.innerHTML = years.map(function(y){
+      var cfg = vacYearConfig(y);
+      var disfrutados = vacDisfrutadosEnAno(y);
+      var acompanar = acompanarHorasEnAno(y);
+      return '<div class="tarifa-card" data-year="'+y+'">'+
+        '<div class="tarifa-header"><span style="font-family:var(--font-display);font-weight:700;color:var(--ink-900);">'+y+'</span>'+
+        (years.length>1 ? '<button class="tramo-remove vac-year-remove">Eliminar</button>' : '')+
+        '</div>'+
+        '<div class="field-row"><label>Días de vacaciones asignados</label><input class="vac-f" data-f="asignados" value="'+cfg.asignados+'"></div>'+
+        '<div class="field-row"><label>Días compensados (pagados)</label><input class="vac-f" data-f="compensados" value="'+cfg.compensados+'"></div>'+
+        '<div class="field-row"><label>Días disfrutados (automático)</label><input value="'+disfrutados+'" disabled style="background:var(--paper-200);"></div>'+
+        '<div class="cond-subhead">Acompañar familiar</div>'+
+        '<div class="field-row"><label>Límite de horas al año</label><input class="vac-f" data-f="limiteAcompanar" value="'+cfg.limiteAcompanar+'"></div>'+
+        '<div class="field-row"><label>Horas usadas (automático)</label><input value="'+fmtHM(acompanar).replace(' h','')+' / '+cfg.limiteAcompanar+'" disabled style="background:var(--paper-200);width:90px;"></div>'+
+      '</div>';
+    }).join('');
+    list.querySelectorAll('.tarifa-card').forEach(function(card){
+      var y = card.getAttribute('data-year');
+      card.querySelectorAll('.vac-f').forEach(function(inp){
+        inp.addEventListener('change', function(){
+          vacYearConfig(y)[inp.getAttribute('data-f')] = parseNum(inp.value);
+          saveState();
+          renderVacaciones();
+          renderListado();
+        });
+      });
+      var rm = card.querySelector('.vac-year-remove');
+      if(rm){
+        rm.addEventListener('click', function(){
+          delete state.vacaciones.porAno[y];
+          saveState();
+          renderVacaciones();
+        });
+      }
+    });
+  }
+  document.getElementById('btn-add-vac-year').addEventListener('click', function(){
+    var years = Object.keys(state.vacaciones.porAno).map(Number);
+    var next = years.length ? Math.max.apply(null, years)+1 : new Date().getFullYear();
+    vacYearConfig(next);
+    saveState();
+    renderVacaciones();
+  });
+
+  /* ================= AJUSTES: PERFIL/EMPRESA ================= */
+  var perfilFieldMap = {
+    'cfg-nombre':'nombre','cfg-dni':'dni','cfg-categoria':'categoria','cfg-npersonal':'nPersonal',
+    'cfg-nafilss':'nAfilSS','cfg-fechaalta':'fechaAlta','cfg-direccion':'direccion','cfg-poblacion':'poblacion'
+  };
+  Object.keys(perfilFieldMap).forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(e){
+      state.perfil[perfilFieldMap[id]] = e.target.value;
+      saveState();
+    });
+  });
+  var empresaFieldMap = { 'cfg-empresa-nombre':'nombre', 'cfg-empresa-nss':'nss' };
+  Object.keys(empresaFieldMap).forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(e){
+      state.empresa[empresaFieldMap[id]] = e.target.value;
+      saveState();
+    });
+  });
+
+  function renderAjustes(){
+    document.getElementById('cfg-nombre').value = state.perfil.nombre;
+    document.getElementById('cfg-dni').value = state.perfil.dni;
+    document.getElementById('cfg-categoria').value = state.perfil.categoria;
+    document.getElementById('cfg-npersonal').value = state.perfil.nPersonal;
+    document.getElementById('cfg-nafilss').value = state.perfil.nAfilSS;
+    document.getElementById('cfg-fechaalta').value = state.perfil.fechaAlta;
+    document.getElementById('cfg-direccion').value = state.perfil.direccion;
+    document.getElementById('cfg-poblacion').value = state.perfil.poblacion;
+    document.getElementById('cfg-empresa-nombre').value = state.empresa.nombre;
+    document.getElementById('cfg-empresa-nss').value = state.empresa.nss;
+    renderDefectoTramos();
+    renderTarifas();
+    renderFestivos();
+    renderVacaciones();
+  }
+
+  /* ================= FESTIVOS ================= */
+  function renderFestivos(){
+    var list = document.getElementById('festivos-list');
+    var sorted = (state.festivos||[]).slice().sort();
+    if(sorted.length===0){
+      list.innerHTML = '<p class="field-hint" style="margin:0;">Sin festivos añadidos.</p>';
+      return;
+    }
+    list.innerHTML = sorted.map(function(iso){
+      var dt = fromISO(iso);
+      return '<div class="festivo-chip" data-iso="'+iso+'"><span>'+pad2(dt.getDate())+' '+MESES[dt.getMonth()]+' '+dt.getFullYear()+' &middot; '+DOW_FULL[dt.getDay()]+'</span><button class="festivo-remove">Quitar</button></div>';
+    }).join('');
+    list.querySelectorAll('.festivo-chip').forEach(function(chip){
+      chip.querySelector('.festivo-remove').addEventListener('click', function(){
+        var iso = chip.getAttribute('data-iso');
+        state.festivos = state.festivos.filter(function(f){return f!==iso;});
+        saveState();
+        renderFestivos(); renderRegistro(); renderListado(); renderExtra();
+      });
+    });
+  }
+  document.getElementById('btn-add-festivo').addEventListener('click', function(){
+    var inp = document.getElementById('festivo-nueva-fecha');
+    if(!inp.value) return;
+    if(!state.festivos) state.festivos = [];
+    if(state.festivos.indexOf(inp.value)===-1) state.festivos.push(inp.value);
+    saveState();
+    inp.value = '';
+    renderFestivos(); renderRegistro(); renderListado(); renderExtra();
+  });
+
+  /* ================= VACACIONES POR RANGO ================= */
+  document.getElementById('btn-marcar-vac-rango').addEventListener('click', function(){
+    var desde = document.getElementById('vac-rango-desde').value;
+    var hasta = document.getElementById('vac-rango-hasta').value;
+    if(!desde || !hasta || desde>hasta){ showToast('Revisa las fechas'); return; }
+    var count = 0;
+    var cur = desde;
+    while(cur<=hasta){
+      var dow = fromISO(cur).getDay();
+      if(dow!==0 && dow!==6 && !isFestivo(cur)){
+        state.entries[cur] = { tipo:'vacaciones', tramos:[] };
+        count++;
+      }
+      cur = addDaysISO(cur,1);
+    }
+    saveState();
+    showToast(count+' días marcados ✓');
+    renderRegistro(); renderListado(); renderExtra(); renderVacaciones();
+  });
+
+  document.getElementById('btn-marcar-baja-rango').addEventListener('click', function(){
+    var desde = document.getElementById('baja-rango-desde').value;
+    var hasta = document.getElementById('baja-rango-hasta').value;
+    if(!desde || !hasta || desde>hasta){ showToast('Revisa las fechas'); return; }
+    var subtipo = document.getElementById('baja-rango-subtipo').value;
+    var hosp = document.getElementById('baja-rango-hospitalizacion').checked;
+    var count = 0;
+    var cur = desde;
+    while(cur<=hasta){
+      state.entries[cur] = { tipo:'baja', tramos:[], bajaSubtipo:subtipo, bajaHospitalizacion:hosp };
+      count++;
+      cur = addDaysISO(cur,1);
+    }
+    saveState();
+    showToast(count+' días marcados ✓');
+    renderRegistro(); renderListado(); renderExtra();
+  });
+
+  /* ================= COPIA DE SEGURIDAD ================= */
+  function exportBackupBlob(){ return new Blob([JSON.stringify(state,null,2)], {type:'application/json'}); }
+  function fallbackDownload(blob,filename){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    var statusEl=document.getElementById('backup-status');
+    if(statusEl) statusEl.textContent='Descargada: '+filename;
+  }
+  function doExportBackup(){
+    var blob=exportBackupBlob();
+    var filename='horas_extra_backup_'+todayISO()+'.json';
+    try{
+      var file=new File([blob],filename,{type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'Copia de seguridad'}).then(function(){
+          var statusEl=document.getElementById('backup-status');
+          if(statusEl) statusEl.textContent='Copia compartida ✓';
+        }).catch(function(err){
+          if(err && err.name!=='AbortError'){ fallbackDownload(blob,filename); }
+        });
+        return;
+      }
+    }catch(e){}
+    fallbackDownload(blob,filename);
+  }
+  function attemptShareBackup(){
+    try{
+      var blob=exportBackupBlob();
+      var filename='horas_extra_backup_'+todayISO()+'.json';
+      var file=new File([blob],filename,{type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'Copia de seguridad'}).catch(function(){});
+      }
+    }catch(e){}
+  }
+  document.getElementById('btn-export-backup').addEventListener('click', doExportBackup);
+  document.getElementById('btn-export-backup-2').addEventListener('click', doExportBackup);
+  document.getElementById('btn-import-backup').addEventListener('click', function(){
+    document.getElementById('import-file-input').click();
+  });
+  document.getElementById('import-file-input').addEventListener('change', function(e){
+    var file=e.target.files[0];
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        if(!data || !data.condiciones || !data.entries) throw new Error('shape');
+        state=data;
+        if(!state.vacaciones) state.vacaciones={porAno:{}};
+        saveState();
+        renderAjustes(); renderListado(); renderExtra(); renderRegistro();
+        document.getElementById('backup-status').textContent='Restaurado ✓';
+      }catch(err){
+        document.getElementById('backup-status').textContent='Archivo no válido';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  /* ================= AJUSTES: ACORDEON ================= */
+  function initSettingsAccordion(){
+    document.querySelectorAll('#view-ajustes .settings-group').forEach(function(group, idx){
+      var h3 = group.querySelector('h3');
+      if(!h3 || h3.getAttribute('data-accordion-init')) return;
+      h3.setAttribute('data-accordion-init','1');
+      var rest = Array.prototype.slice.call(group.children).filter(function(el){ return el!==h3; });
+      var body = document.createElement('div');
+      body.className = 'settings-body';
+      body.style.display = 'none';
+      rest.forEach(function(el){ body.appendChild(el); });
+      group.appendChild(body);
+      var label = h3.textContent;
+      h3.innerHTML = '<span>'+label+'</span><span class="accordion-chevron">&#9662;</span>';
+      h3.addEventListener('click', function(){
+        var open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        h3.querySelector('.accordion-chevron').innerHTML = open ? '&#9662;' : '&#9652;';
+      });
+    });
+  }
+
+  /* ================= INIT ================= */
+  (function init(){
+    var dataMonth = mostRecentMonthWithData();
+    if(dataMonth){ listadoMonth = dataMonth; extraMonth = dataMonth; }
+    renderAjustes();
+    renderListado();
+    renderExtra();
+    renderRegistro();
+    initSettingsAccordion();
+  })();
+})();
+</script>
+</body>
+</html>
