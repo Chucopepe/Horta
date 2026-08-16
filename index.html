@@ -770,21 +770,28 @@
     return cond.jornada[String(dow)] || 0;
   }
 
-  function synthesizeTramosForDay(teoricaBase){
+  function synthesizeTramosForDay(teoricaBase, iso){
     var base = JSON.parse(JSON.stringify(state.defecto.tramos)).filter(function(t){return t.entrada&&t.salida;});
     if(!base.length) return base;
     var total = computeTramosNet(base);
     if(total <= teoricaBase + 0.0001) return base;
-    var startMin = toMinutes(base[0].entrada);
+    var startTime = base[0].entrada;
+    if(iso && fromISO(iso).getDay()===5){
+      var cond = findCondForDate(iso);
+      if(cond && cond.viernesTardeLibre){
+        startTime = '08:00';
+      }
+    }
+    var startMin = toMinutes(startTime);
     var endMin = startMin + Math.round(teoricaBase*60);
     var endHH = Math.floor(endMin/60)%24;
     var endMM = endMin%60;
-    return [{ entrada: base[0].entrada, salida: pad2(endHH)+':'+pad2(endMM) }];
+    return [{ entrada: startTime, salida: pad2(endHH)+':'+pad2(endMM) }];
   }
   function horarioEstipuladoDia(iso){
     var teoricaBase = jornadaTeoricaDia(iso);
     if(teoricaBase<=0) return [];
-    return synthesizeTramosForDay(teoricaBase);
+    return synthesizeTramosForDay(teoricaBase, iso);
   }
   function calcularHorasExtraClock(tramosActuales, tramosEstipulados){
     var actuales = (tramosActuales||[]).filter(function(t){return t.entrada&&t.salida;});
@@ -840,7 +847,7 @@
     var auto = false;
     if(!entry){
       if(teoricaBase<=0) return null;
-      entry = { tipo:'normal', tramos: synthesizeTramosForDay(teoricaBase) };
+      entry = { tipo:'normal', tramos: synthesizeTramosForDay(teoricaBase, iso) };
       auto = true;
     }
     var tipo = entry.tipo || 'normal';
@@ -1114,7 +1121,7 @@
     }
     var teorica = jornadaTeoricaDia(iso);
     if(teorica<=0){ el.textContent = 'Sin jornada exigida este día.'; return; }
-    var synth = synthesizeTramosForDay(teorica);
+    var synth = synthesizeTramosForDay(teorica, iso);
     el.textContent = 'Horario por defecto: '+tramosResumen(synth)+' (sin fichar todavía)';
   }
   function renderRegistro(){
@@ -1130,7 +1137,7 @@
     var tipo = isFestivo(iso) ? 'festivo' : (entry ? (entry.tipo||'normal') : 'normal');
     setTipoUI(tipo);
 
-    var tramosNormal = entry && tipo==='normal' ? entry.tramos : (entry ? null : synthesizeTramosForDay(jornadaTeoricaDia(iso)));
+    var tramosNormal = entry && tipo==='normal' ? entry.tramos : (entry ? null : synthesizeTramosForDay(jornadaTeoricaDia(iso), iso));
     renderTramosInto('tramos-list', tramosNormal, recalcRegistro);
 
     document.getElementById('med-subtipo').value = entry && entry.medicoSubtipo ? entry.medicoSubtipo : 'propia';
