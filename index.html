@@ -75,7 +75,6 @@
   .tipo-dia-btn.active.fest{background:var(--coral-700);border-color:var(--coral-700);}
   .tipo-dia-btn.active.baja{background:var(--rust-700);border-color:var(--rust-700);}
   .tipo-dia-btn.active.permiso{background:var(--violet-700);border-color:var(--violet-700);}
-  .tipo-dia-btn.active.huelga{background:var(--coral-700);border-color:var(--coral-700);}
 
   .tramo-card{background:var(--card);border:1px solid var(--paper-300);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;}
   .tramo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
@@ -329,18 +328,21 @@
 
       <button class="btn-fichar-salida" id="btn-fichar-salida">Fichar salida</button>
       <p class="fichar-hint" id="reg-status-text">Horario por defecto: 8:00 a 13:00 y 14:00 a 17:19</p>
+      <button class="btn-danger-text" id="btn-eliminar-dia" style="display:none;">Eliminar este registro</button>
 
       <button class="btn-editar-toggle" id="btn-editar-toggle">Editar este día &#9662;</button>
 
       <div id="editar-dia-panel" style="display:none;">
-        <div class="tipo-dia-row">
+        <button class="btn-primary" id="btn-guardar">Guardar jornada</button>
+        <button class="btn-secondary" id="btn-restaurar-defecto">Restaurar horario por defecto</button>
+
+        <div class="tipo-dia-row" style="margin-top:14px;">
           <button class="tipo-dia-btn active" data-tipo="normal" id="tipo-btn-normal">Normal</button>
           <button class="tipo-dia-btn" data-tipo="vacaciones" id="tipo-btn-vacaciones">Vacaciones</button>
           <button class="tipo-dia-btn" data-tipo="medico" id="tipo-btn-medico">Médico</button>
           <button class="tipo-dia-btn" data-tipo="festivo" id="tipo-btn-festivo">Festivo</button>
           <button class="tipo-dia-btn" data-tipo="baja" id="tipo-btn-baja">Baja</button>
           <button class="tipo-dia-btn" data-tipo="permiso" id="tipo-btn-permiso">Permiso</button>
-          <button class="tipo-dia-btn" data-tipo="huelga" id="tipo-btn-huelga" style="grid-column:1 / span 2;">Huelga</button>
         </div>
 
         <div id="normal-block">
@@ -372,10 +374,6 @@
           <p class="field-hint" id="permiso-info" style="margin-top:8px;margin-bottom:0;"></p>
         </div>
 
-        <div id="huelga-block" class="vac-card" style="display:none; border-color:var(--coral-700); color:var(--coral-700);">
-          &#9995; Día de huelga. No genera derecho a salario — se descuenta del Salario Base y Comp. Personal de este mes, sin ningún subsidio. No cuenta para el Plus de Asistencia.
-        </div>
-
         <div id="med-block" class="med-card" style="display:none;">
           <label class="field-label">Motivo</label>
           <select id="med-subtipo">
@@ -395,10 +393,6 @@
           <div class="gauge"><div class="gauge-fill" id="res-gauge" style="width:0%;"></div></div>
           <div class="result-row total"><span class="lbl">Horas extra</span><span class="val" id="res-diferencia">0,00 h</span></div>
         </div>
-
-        <button class="btn-primary" id="btn-guardar">Guardar jornada</button>
-        <button class="btn-secondary" id="btn-restaurar-defecto">Restaurar horario por defecto</button>
-        <button class="btn-danger-text" id="btn-eliminar-dia" style="display:none;">Eliminar este registro</button>
       </div>
     </section>
 
@@ -837,6 +831,7 @@
     deberInexcusable: { label:'Deber inexcusable de carácter público', info:'El tiempo indispensable para cumplirlo.', retribuido:true },
     examenesPrenatales: { label:'Exámenes prenatales / preparación al parto', info:'El tiempo necesario dentro de la jornada.', retribuido:true },
     otroRetribuido: { label:'Otro permiso retribuido', info:'Según lo acordado con la empresa.', retribuido:true },
+    huelga: { label:'Huelga', info:'No genera derecho a salario esos días — se descuenta del Salario Base y Comp. Personal.', retribuido:false },
     noRetribuido: { label:'Permiso sin sueldo', info:'No genera derecho a salario esos días — se descuenta del Salario Base y Comp. Personal.', retribuido:false }
   };
   function diaInfo(iso){
@@ -867,9 +862,6 @@
       teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
       var motivoCfg = MOTIVOS_PERMISO[entry.permisoMotivo] || MOTIVOS_PERMISO.otroRetribuido;
       permisoRetribuido = motivoCfg.retribuido;
-    } else if(tipo==='huelga'){
-      teoricaEfectiva = 0; trabajadas = 0; horasExtra = 0;
-      permisoRetribuido = false;
     } else if(tipo==='medico'){
       medHoras = entry.medicoHoras!=null ? entry.medicoHoras : teoricaBase;
       teoricaEfectiva = Math.max(0, teoricaBase - medHoras);
@@ -1055,7 +1047,7 @@
     var teoricaBase = jornadaTeoricaDia(regCurrentDate);
     document.getElementById('reg-badge-jornada').textContent = fmtHM(teoricaBase);
     var trabajadas, teoricaEfectiva, horasExtra;
-    if(regTipo==='vacaciones' || regTipo==='festivo' || regTipo==='baja' || regTipo==='permiso' || regTipo==='huelga'){
+    if(regTipo==='vacaciones' || regTipo==='festivo' || regTipo==='baja' || regTipo==='permiso'){
       trabajadas=0; teoricaEfectiva=0; horasExtra=0;
     } else if(regTipo==='medico'){
       var medHoras = parseNum(document.getElementById('med-horas').value);
@@ -1089,7 +1081,6 @@
       b.classList.toggle('fest', b.getAttribute('data-tipo')==='festivo' && tipo==='festivo');
       b.classList.toggle('baja', b.getAttribute('data-tipo')==='baja' && tipo==='baja');
       b.classList.toggle('permiso', b.getAttribute('data-tipo')==='permiso' && tipo==='permiso');
-      b.classList.toggle('huelga', b.getAttribute('data-tipo')==='huelga' && tipo==='huelga');
     });
     document.getElementById('normal-block').style.display = tipo==='normal' ? 'block' : 'none';
     document.getElementById('vac-block').style.display = tipo==='vacaciones' ? 'block' : 'none';
@@ -1097,7 +1088,6 @@
     document.getElementById('fest-block').style.display = tipo==='festivo' ? 'block' : 'none';
     document.getElementById('baja-block').style.display = tipo==='baja' ? 'block' : 'none';
     document.getElementById('permiso-block').style.display = tipo==='permiso' ? 'block' : 'none';
-    document.getElementById('huelga-block').style.display = tipo==='huelga' ? 'block' : 'none';
     recalcRegistro();
   }
   document.querySelectorAll('.tipo-dia-btn').forEach(function(btn){
@@ -1118,7 +1108,6 @@
       if(entry.tipo==='vacaciones'){ el.textContent = 'Marcado como vacaciones.'; return; }
       if(entry.tipo==='baja'){ el.textContent = 'Marcado como baja.'; return; }
       if(entry.tipo==='permiso'){ el.textContent = 'Permiso: '+(MOTIVOS_PERMISO[entry.permisoMotivo]?MOTIVOS_PERMISO[entry.permisoMotivo].label:'otro'); return; }
-      if(entry.tipo==='huelga'){ el.textContent = 'Marcado como huelga.'; return; }
       if(entry.tipo==='medico'){ el.textContent = 'Marcado como médico ('+(entry.medicoSubtipo==='acompanar'?'acompañar familiar':'consulta propia')+').'; return; }
       el.textContent = 'Fichado: '+tramosResumen(entry.tramos);
       return;
@@ -1209,6 +1198,13 @@
     renderTramosInto('tramos-list', JSON.parse(JSON.stringify(state.defecto.tramos)), recalcRegistro);
     recalcRegistro();
   });
+  function closeEditPanel(){
+    var panel = document.getElementById('editar-dia-panel');
+    if(panel.style.display !== 'none'){
+      panel.style.display = 'none';
+      document.getElementById('btn-editar-toggle').innerHTML = 'Editar este día &#9662;';
+    }
+  }
   function guardarJornada(){
     if(!state.festivos) state.festivos = [];
     var wasFestivo = state.festivos.indexOf(regCurrentDate) > -1;
@@ -1220,6 +1216,7 @@
       updateRegStatusText(regCurrentDate);
       showToast('Guardado ✓');
       attemptShareBackup();
+      closeEditPanel();
       return true;
     }
     if(wasFestivo){ state.festivos = state.festivos.filter(function(f){return f!==regCurrentDate;}); }
@@ -1237,8 +1234,6 @@
     } else if(regTipo==='permiso'){
       entry.tramos = [];
       entry.permisoMotivo = document.getElementById('permiso-motivo').value;
-    } else if(regTipo==='huelga'){
-      entry.tramos = [];
     } else if(regTipo==='medico'){
       entry.medicoSubtipo = document.getElementById('med-subtipo').value;
       entry.medicoHoras = parseNum(document.getElementById('med-horas').value);
@@ -1250,6 +1245,7 @@
     updateRegStatusText(regCurrentDate);
     showToast('Guardado ✓');
     attemptShareBackup();
+    closeEditPanel();
     return true;
   }
   document.getElementById('btn-guardar').addEventListener('click', guardarJornada);
@@ -1371,10 +1367,8 @@
           inner += '<span class="cal-delta">&#129658;</span><span class="cal-sublabel">Baja</span>';
         } else if(info.tipo==='permiso'){
           cls += info.permisoRetribuido ? ' permiso-si' : ' permiso-no';
-          inner += '<span class="cal-delta">'+(info.permisoRetribuido?'&#128203;':'&#9995;')+'</span><span class="cal-sublabel">'+(info.permisoRetribuido?'Permiso':'S/sueldo')+'</span>';
-        } else if(info.tipo==='huelga'){
-          cls += ' permiso-no';
-          inner += '<span class="cal-delta">&#9995;</span><span class="cal-sublabel">Huelga</span>';
+          var permisoLabel = info.permisoMotivo==='huelga' ? 'Huelga' : (info.permisoRetribuido?'Permiso':'S/sueldo');
+          inner += '<span class="cal-delta">'+(info.permisoRetribuido?'&#128203;':'&#9995;')+'</span><span class="cal-sublabel">'+permisoLabel+'</span>';
         } else if(info.tipo==='medico'){
           cls += info.medSubtipo==='acompanar' ? ' med-acompanar' : ' med-propia';
           var medDeltaClass = info.horasExtra>0.004 ? 'positive' : 'neutral';
@@ -1449,7 +1443,7 @@
     var diasMes = diasDelMes(extraMonth);
     var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
     var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
-    var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='huelga' || (d.tipo==='permiso' && !d.permisoRetribuido); });
+    var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='permiso' && !d.permisoRetribuido; });
     var totalDiasMes = fromISO(mrange[1]).getDate();
     var diasSinSueldo = diasBaja.length + diasNoRetribuidos.length;
     var factorPresencia = diasSinSueldo>0 ? Math.max(0, (totalDiasMes-diasSinSueldo)/totalDiasMes) : 1;
@@ -1611,7 +1605,7 @@
     dias.forEach(function(d){
       var dt = fromISO(d.iso);
       totalT+=d.trabajadas;
-      var tipoLabel = (d.tipo==='vacaciones'?'Vacaciones':(d.tipo==='baja'?'Baja':(d.tipo==='huelga'?'Huelga':(d.tipo==='permiso'?('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')):(d.tipo==='medico'?('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')):'Normal'))))) + (d.auto?' (auto)':'');
+      var tipoLabel = (d.tipo==='vacaciones'?'Vacaciones':(d.tipo==='baja'?'Baja':(d.tipo==='permiso'?('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')):(d.tipo==='medico'?('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')):'Normal')))) + (d.auto?' (auto)':'');
       var cls='', sign='', diffTxt='—';
       if(d.tipo==='normal' || d.tipo==='medico'){
         totalE+=d.horasExtra;
