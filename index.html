@@ -1130,7 +1130,7 @@
     var tipo = isFestivo(iso) ? 'festivo' : (entry ? (entry.tipo||'normal') : 'normal');
     setTipoUI(tipo);
 
-    var tramosNormal = entry && tipo==='normal' ? entry.tramos : (entry ? null : state.defecto.tramos);
+    var tramosNormal = entry && tipo==='normal' ? entry.tramos : (entry ? null : synthesizeTramosForDay(jornadaTeoricaDia(iso)));
     renderTramosInto('tramos-list', tramosNormal, recalcRegistro);
 
     document.getElementById('med-subtipo').value = entry && entry.medicoSubtipo ? entry.medicoSubtipo : 'propia';
@@ -1195,7 +1195,7 @@
   }
   document.getElementById('permiso-motivo').addEventListener('change', updatePermisoInfo);
   document.getElementById('btn-restaurar-defecto').addEventListener('click', function(){
-    renderTramosInto('tramos-list', JSON.parse(JSON.stringify(state.defecto.tramos)), recalcRegistro);
+    renderTramosInto('tramos-list', synthesizeTramosForDay(jornadaTeoricaDia(regCurrentDate)), recalcRegistro);
     recalcRegistro();
   });
   function closeEditPanel(){
@@ -1252,7 +1252,7 @@
   document.getElementById('btn-fichar-salida').addEventListener('click', function(){
     if(regTipo!=='normal') setTipoUI('normal');
     var cards = document.querySelectorAll('#tramos-list .tramo-card');
-    if(cards.length===0){ renderTramosInto('tramos-list', JSON.parse(JSON.stringify(state.defecto.tramos)), recalcRegistro); cards = document.querySelectorAll('#tramos-list .tramo-card'); }
+    if(cards.length===0){ renderTramosInto('tramos-list', synthesizeTramosForDay(jornadaTeoricaDia(regCurrentDate)), recalcRegistro); cards = document.querySelectorAll('#tramos-list .tramo-card'); }
     var lastCard = cards[cards.length-1];
     lastCard.querySelector('.tout').value = nowHM();
     recalcRegistro();
