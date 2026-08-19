@@ -158,6 +158,8 @@
   .fc-cell.empty{visibility:hidden;cursor:default;}
   .fc-cell.fc-today{border-color:var(--rust-500);}
   .fc-cell.fc-selected{background:var(--coral-700);border-color:var(--coral-700);color:#fff;}
+  .fc-cell.fc-selected.fc-vac{background:var(--teal-500);border-color:var(--teal-500);}
+  .fc-cell.fc-disabled{background:var(--paper-200);border-style:dotted;color:var(--paper-300);cursor:default;}
   .cal-cell.future{opacity:0.35;cursor:default;}
   .cal-cell.day-auto{border-style:dashed;}
   .cal-cell.day-manual{border-style:solid;}
@@ -531,11 +533,22 @@
       </div>
 
       <div class="settings-group">
-        <h3>Marcar vacaciones por rango</h3>
-        <p class="field-hint" style="margin-top:0;">Marca varios días de vacaciones a la vez. Se aplica solo a días laborables (no fines de semana ni festivos).</p>
-        <div class="field-row"><label>Desde</label><input type="date" id="vac-rango-desde" class="date-input"></div>
-        <div class="field-row"><label>Hasta</label><input type="date" id="vac-rango-hasta" class="date-input"></div>
-        <button class="btn-secondary" id="btn-marcar-vac-rango" style="margin-top:6px;">Marcar como vacaciones</button>
+        <h3>Marcar vacaciones</h3>
+        <p class="field-hint" style="margin-top:0;">Toca los días laborables en el calendario para marcarlos como vacaciones. Fines de semana y festivos aparecen bloqueados automáticamente.</p>
+        <button class="btn-secondary" id="btn-abrir-vac-calendario" style="margin-top:0;">&#128197; Seleccionar días de vacaciones</button>
+        <div id="vac-calendario-panel" style="display:none;margin-top:12px;">
+          <div class="month-bar" style="margin-bottom:10px;">
+            <button class="date-nav-btn" id="vc-month-prev">&#8249;</button>
+            <span class="month-label" id="vc-month-label">Agosto 2026</span>
+            <button class="date-nav-btn" id="vc-month-next">&#8250;</button>
+          </div>
+          <div class="cal-dow-row">
+            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="vc-grid" class="cal-grid"></div>
+          <p class="field-hint" style="margin:8px 0;">Toca los días laborables para marcarlos o desmarcarlos como vacaciones. Puedes navegar por varios meses antes de guardar.</p>
+          <button class="btn-primary" id="btn-guardar-vac-calendario" style="margin-top:0;">Guardar vacaciones seleccionadas</button>
+        </div>
       </div>
 
       <div class="settings-group">
@@ -715,7 +728,7 @@
     return (neg?'-':'')+hh+':'+pad2(mm)+' h';
   }
   function fmtCompactExtra(h){
-    var v = Math.round((h||0)*2)/2;
+    var v = roundHalf(h||0);
     if(Math.abs(v)<0.004) return '0';
     var sign = v>0 ? '+' : '&minus;';
     var av = Math.abs(v);
@@ -739,7 +752,7 @@
   function fmtEUR(n){ return (n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'; }
   function escapeHTML(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
   function toMinutes(hhmm){ if(!hhmm) return null; var p=hhmm.split(':'); return parseInt(p[0],10)*60+parseInt(p[1],10); }
-  function roundHalf(n){ return Math.round(n*2)/2; }
+  function roundHalf(n){ return Math.floor(n*2)/2; }
 
   function computeTramosNet(tramos){
     var totalMin=0;
@@ -2033,25 +2046,75 @@
     renderFestivos(); renderRegistro(); renderListado(); renderExtra();
   });
 
-  /* ================= VACACIONES POR RANGO ================= */
-  document.getElementById('btn-marcar-vac-rango').addEventListener('click', function(){
-    var desde = document.getElementById('vac-rango-desde').value;
-    var hasta = document.getElementById('vac-rango-hasta').value;
-    if(!desde || !hasta || desde>hasta){ showToast('Revisa las fechas'); return; }
-    var count = 0;
-    var cur = desde;
-    while(cur<=hasta){
-      var dow = fromISO(cur).getDay();
-      if(dow!==0 && dow!==6 && !isFestivo(cur)){
-        state.entries[cur] = { tipo:'vacaciones', tramos:[] };
-        count++;
-      }
-      cur = addDaysISO(cur,1);
+  /* ================= VACACIONES: SELECTOR DE CALENDARIO ================= */
+  var vcMonth = null;
+  var vcChanges = null;
+  function isVacActual(iso){
+    return !!(state.entries[iso] && state.entries[iso].tipo==='vacaciones');
+  }
+  function vcEffectiveSelected(iso){
+    if(vcChanges.hasOwnProperty(iso)) return vcChanges[iso]==='add';
+    return isVacActual(iso);
+  }
+  function renderVacCalendario(){
+    document.getElementById('vc-month-label').textContent = monthLabel(vcMonth);
+    var range = monthDaysRange(vcMonth);
+    var lastDay = fromISO(range[1]).getDate();
+    var firstDow = (fromISO(range[0]).getDay()+6)%7;
+    var today = todayISO();
+    var html = '';
+    for(var i=0;i<firstDow;i++){ html += '<div class="fc-cell empty"></div>'; }
+    for(var day=1; day<=lastDay; day++){
+      var iso = vcMonth+'-'+pad2(day);
+      var dow = fromISO(iso).getDay();
+      var eligible = dow!==0 && dow!==6 && !isFestivo(iso);
+      var cls = 'fc-cell';
+      if(iso===today) cls += ' fc-today';
+      if(!eligible){ cls += ' fc-disabled'; }
+      else if(vcEffectiveSelected(iso)){ cls += ' fc-selected fc-vac'; }
+      html += '<div class="'+cls+'" data-date="'+iso+'" data-eligible="'+eligible+'">'+day+'</div>';
     }
+    var grid = document.getElementById('vc-grid');
+    grid.innerHTML = html;
+    grid.querySelectorAll('.fc-cell[data-eligible="true"]').forEach(function(cell){
+      cell.addEventListener('click', function(){
+        var iso = cell.getAttribute('data-date');
+        var currentlySelected = vcEffectiveSelected(iso);
+        vcChanges[iso] = currentlySelected ? 'remove' : 'add';
+        cell.classList.toggle('fc-selected', !currentlySelected);
+        cell.classList.toggle('fc-vac', !currentlySelected);
+      });
+    });
+  }
+  document.getElementById('btn-abrir-vac-calendario').addEventListener('click', function(){
+    var panel = document.getElementById('vac-calendario-panel');
+    var open = panel.style.display !== 'none';
+    if(open){ panel.style.display = 'none'; return; }
+    vcMonth = monthKey(todayISO());
+    vcChanges = {};
+    panel.style.display = 'block';
+    renderVacCalendario();
+  });
+  document.getElementById('vc-month-prev').addEventListener('click', function(){ vcMonth = addMonths(vcMonth,-1); renderVacCalendario(); });
+  document.getElementById('vc-month-next').addEventListener('click', function(){ vcMonth = addMonths(vcMonth,1); renderVacCalendario(); });
+  document.getElementById('btn-guardar-vac-calendario').addEventListener('click', function(){
+    var added=0, removed=0;
+    Object.keys(vcChanges).forEach(function(iso){
+      if(vcChanges[iso]==='add'){
+        state.entries[iso] = { tipo:'vacaciones', tramos:[] };
+        added++;
+      } else if(vcChanges[iso]==='remove' && isVacActual(iso)){
+        delete state.entries[iso];
+        removed++;
+      }
+    });
     saveState();
-    showToast(count+' días marcados ✓');
+    document.getElementById('vac-calendario-panel').style.display = 'none';
+    showToast(added+' añadidos, '+removed+' quitados ✓');
     renderRegistro(); renderListado(); renderExtra(); renderVacaciones();
   });
+
+  /* ================= VACACIONES POR RANGO (obsoleto, sustituido por el calendario) ================= */
 
   document.getElementById('btn-marcar-baja-rango').addEventListener('click', function(){
     var desde = document.getElementById('baja-rango-desde').value;
