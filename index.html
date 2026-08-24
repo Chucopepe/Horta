@@ -621,7 +621,7 @@
   <p class="pr-liquido">Líquido estimado: <span id="pn-liquido">0,00 €</span></p>
   <p class="pr-title" style="font-size:10px;">Detalle de fichajes del periodo de horas extra</p>
   <table class="pr-grid">
-    <thead><tr><th>Día</th><th>Tramos</th><th>Trabajadas</th><th>Exigida</th><th>Extra</th></tr></thead>
+    <thead><tr><th>Día</th><th>Horario real</th><th>Horario estipulado</th><th>Extra</th></tr></thead>
     <tbody id="pn-fichajes"></tbody>
   </table>
   <p class="pr-footnote">Documento generado por la app a partir de las jornadas registradas y las condiciones configuradas. No sustituye a la nómina oficial.</p>
@@ -1434,6 +1434,7 @@
     var dias=[];
     while(cur<=end){
       var info = diaInfo(cur);
+      var estipulado = (info && (info.tipo==='normal')) ? horarioEstipuladoDia(cur) : [];
       if(info && (info.tipo==='normal' || info.tipo==='medico') && info.horasExtra>0.004){
         var horasRedondeadas = roundHalf(info.horasExtra);
         var dow = fromISO(cur).getDay();
@@ -1442,9 +1443,9 @@
         var importe = horasRedondeadas*precio;
         totalHorasExtra += horasRedondeadas;
         importeExtra += importe;
-        dias.push({iso:cur, info:info, horasRedondeadas:horasRedondeadas, precio:precio, importe:importe});
+        dias.push({iso:cur, info:info, estipulado:estipulado, horasRedondeadas:horasRedondeadas, precio:precio, importe:importe});
       } else if(info){
-        dias.push({iso:cur, info:info, horasRedondeadas:0, precio:0, importe:0});
+        dias.push({iso:cur, info:info, estipulado:estipulado, horasRedondeadas:0, precio:0, importe:0});
       }
       cur = addDaysISO(cur,1);
     }
@@ -1675,7 +1676,9 @@
     data.extraInfo.dias.forEach(function(d){
       var dt = fromISO(d.iso);
       var cls = d.horasRedondeadas>0.004?'pos':'';
-      fb += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+escapeHTML(tramosTexto(d.info.tramos))+'</td><td>'+fmtHM(d.info.trabajadas)+'</td><td>'+fmtHM(d.info.teorica)+'</td><td class="'+cls+'">'+(d.horasRedondeadas>0.004?'+'+fmtHM(d.horasRedondeadas):'—')+'</td></tr>';
+      var horarioReal = d.info.tipo==='normal' ? (tramosTexto(d.info.tramos) || '—') : (d.info.tipo==='medico' ? 'Médico' : '—');
+      var horarioEstip = d.estipulado && d.estipulado.length ? tramosTexto(d.estipulado) : '—';
+      fb += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+escapeHTML(horarioReal)+'</td><td>'+escapeHTML(horarioEstip)+'</td><td class="'+cls+'">'+(d.horasRedondeadas>0.004?'+'+fmtHM(d.horasRedondeadas):'—')+'</td></tr>';
     });
     document.getElementById('pn-fichajes').innerHTML = fb;
 
