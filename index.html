@@ -1354,7 +1354,7 @@
     document.getElementById('listado-month-label').textContent = monthLabel(listadoMonth);
     var dias = diasDelMes(listadoMonth);
     var totalTrabajadas=0, totalExtra=0;
-    dias.forEach(function(d){ totalTrabajadas+=d.trabajadas; totalExtra+= (d.tipo==='normal'||d.tipo==='medico') ? d.horasExtra : 0; });
+    dias.forEach(function(d){ totalTrabajadas+=d.trabajadas; totalExtra+= (d.tipo==='normal'||d.tipo==='medico') ? roundHalf(d.horasExtra) : 0; });
 
     var year = parseInt(listadoMonth.slice(0,4),10);
     document.getElementById('vac-saldo').textContent = vacSaldoAcumuladoHasta(year);
@@ -1629,10 +1629,11 @@
       var tipoLabel = (d.tipo==='vacaciones'?'Vacaciones':(d.tipo==='baja'?'Baja':(d.tipo==='permiso'?('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')):(d.tipo==='medico'?('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')):'Normal')))) + (d.auto?' (auto)':'');
       var cls='', sign='', diffTxt='—';
       if(d.tipo==='normal' || d.tipo==='medico'){
-        totalE+=d.horasExtra;
-        cls = d.horasExtra>0.004?'pos':'';
-        sign = d.horasExtra>0.004?'+':'';
-        diffTxt = d.horasExtra>0.004 ? sign+fmtHM(d.horasExtra) : '0:00';
+        var horasExtraRed = roundHalf(d.horasExtra);
+        totalE+=horasExtraRed;
+        cls = horasExtraRed>0.004?'pos':'';
+        sign = horasExtraRed>0.004?'+':'';
+        diffTxt = horasExtraRed>0.004 ? sign+fmtHM(horasExtraRed) : '0:00';
       }
       body += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+tipoLabel+'</td><td>'+escapeHTML(tramosTexto(d.tramos))+'</td><td>'+fmtHM(d.trabajadas)+'</td><td>'+fmtHM(d.teorica)+'</td><td class="'+cls+'">'+diffTxt+'</td></tr>';
     });
