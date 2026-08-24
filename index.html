@@ -1656,7 +1656,6 @@
       var colaTotals = {e:0};
       body += '<tr class="pr-total"><td colspan="4">Cola de '+monthLabel(prevMonth)+' (cuenta para las horas extra de este mes)</td></tr>';
       diasCola.forEach(function(d){ body += filaDia(d, colaTotals); });
-      body += '<tr class="pr-total"><td colspan="3">Subtotal cola</td><td>'+(colaTotals.e>0.004?'+':'')+fmtHM(colaTotals.e)+'</td></tr>';
       body += '<tr class="pr-total"><td colspan="4">'+monthLabel(listadoMonth)+'</td></tr>';
     }
     var totals = {e:0};
