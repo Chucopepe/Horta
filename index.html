@@ -1634,18 +1634,18 @@
     var dias = diasDelMes(listadoMonth);
     var prevMonth = addMonths(listadoMonth,-1);
     var prevRange = monthDaysRange(prevMonth);
-    var prevLastDay = fromISO(prevRange[1]).getDate();
-    var prevTailDesde = prevMonth+'-'+pad2(Math.min(25,prevLastDay));
-    var diasCola = diasEnRango(prevTailDesde, prevRange[1]);
+    var periodoNomina = extraPeriodRange(listadoMonth); // [25 mes anterior, 24 este mes]
+    var diasCola = diasEnRango(periodoNomina[0], prevRange[1]);
     if(!dias.length && !diasCola.length) return false;
     var body='';
-    function filaDia(d, totals){
+    var totals = {e:0};
+    function filaDia(d, contarParaTotal){
       var dt = fromISO(d.iso);
       var tipoLabel = d.tipo==='vacaciones' ? 'Vacaciones' : (d.tipo==='baja' ? 'Baja' : (d.tipo==='permiso' ? ('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')) : (d.tipo==='medico' ? ('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')) : (d.tipo==='festivo' ? 'Festivo' : '—'))));
       var cls='', sign='', diffTxt='—';
       if(d.tipo==='normal' || d.tipo==='medico'){
         var horasExtraRed = roundHalf(d.horasExtra);
-        totals.e+=horasExtraRed;
+        if(contarParaTotal) totals.e+=horasExtraRed;
         cls = horasExtraRed>0.004?'pos':'';
         sign = horasExtraRed>0.004?'+':'';
         diffTxt = horasExtraRed>0.004 ? sign+fmtHM(horasExtraRed) : '0:00';
@@ -1653,14 +1653,12 @@
       return '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+tipoLabel+'</td><td>'+escapeHTML(tramosTexto(d.tramos)||'—')+'</td><td class="'+cls+'">'+diffTxt+'</td></tr>';
     }
     if(diasCola.length){
-      var colaTotals = {e:0};
       body += '<tr class="pr-total"><td colspan="4">Cola de '+monthLabel(prevMonth)+' (cuenta para las horas extra de este mes)</td></tr>';
-      diasCola.forEach(function(d){ body += filaDia(d, colaTotals); });
+      diasCola.forEach(function(d){ body += filaDia(d, true); });
       body += '<tr class="pr-total"><td colspan="4">'+monthLabel(listadoMonth)+'</td></tr>';
     }
-    var totals = {e:0};
-    dias.forEach(function(d){ body += filaDia(d, totals); });
-    body += '<tr class="pr-total"><td colspan="3">TOTAL horas extra — '+monthLabel(listadoMonth)+'</td><td>'+(totals.e>0.004?'+':'')+fmtHM(totals.e)+'</td></tr>';
+    dias.forEach(function(d){ body += filaDia(d, d.iso<=periodoNomina[1]); });
+    body += '<tr class="pr-total"><td colspan="3">TOTAL horas extra pagadas en esta nómina</td><td>'+(totals.e>0.004?'+':'')+fmtHM(totals.e)+'</td></tr>';
     document.getElementById('pl-title').textContent = 'Horas — '+monthLabel(listadoMonth);
     document.getElementById('pl-sub').textContent = state.perfil.nombre||'';
     document.getElementById('pl-body').innerHTML = body;
