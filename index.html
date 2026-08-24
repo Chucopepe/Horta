@@ -1365,8 +1365,9 @@
   function renderListado(){
     document.getElementById('listado-month-label').textContent = monthLabel(listadoMonth);
     var dias = diasDelMes(listadoMonth);
-    var totalTrabajadas=0, totalExtra=0;
-    dias.forEach(function(d){ totalTrabajadas+=d.trabajadas; totalExtra+= (d.tipo==='normal'||d.tipo==='medico') ? roundHalf(d.horasExtra) : 0; });
+    var totalTrabajadas=0;
+    dias.forEach(function(d){ totalTrabajadas+=d.trabajadas; });
+    var totalExtra = computeExtraForMonth(listadoMonth).totalHorasExtra;
 
     var year = parseInt(listadoMonth.slice(0,4),10);
     document.getElementById('vac-saldo').textContent = vacSaldoAcumuladoHasta(year);
