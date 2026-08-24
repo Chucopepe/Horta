@@ -631,7 +631,7 @@
   <p class="pr-title" id="pl-title">Horas — Agosto 2026</p>
   <p class="pr-footnote" id="pl-sub" style="border:none;padding:0;margin:0 0 6px;text-align:center;"></p>
   <table class="pr-grid">
-    <thead><tr><th>Día</th><th>Tipo</th><th>Tramos</th><th>Trabajadas</th><th>Exigida</th><th>Extra</th></tr></thead>
+    <thead><tr><th>Día</th><th>Tipo</th><th>Tramos</th><th>Extra</th></tr></thead>
     <tbody id="pl-body"></tbody>
     <tfoot id="pl-foot"></tfoot>
   </table>
@@ -1345,6 +1345,18 @@
     }
     return days;
   }
+  function diasEnRango(desde, hasta){
+    var end = hasta < todayISO() ? hasta : todayISO();
+    var days = [];
+    if(end < desde) return days;
+    var cur = desde;
+    while(cur<=end){
+      var info = diaInfo(cur);
+      if(info) days.push(info);
+      cur = addDaysISO(cur,1);
+    }
+    return days;
+  }
 
   function tramosTexto(tramos){
     return (tramos||[]).filter(function(t){return t.entrada&&t.salida;}).map(function(t){return t.entrada+'-'+t.salida;}).join(', ');
@@ -1620,24 +1632,36 @@
 
   function buildListadoReport(){
     var dias = diasDelMes(listadoMonth);
-    if(!dias.length) return false;
-    var totalT=0, totalE=0;
+    var prevMonth = addMonths(listadoMonth,-1);
+    var prevRange = monthDaysRange(prevMonth);
+    var prevLastDay = fromISO(prevRange[1]).getDate();
+    var prevTailDesde = prevMonth+'-'+pad2(Math.min(25,prevLastDay));
+    var diasCola = diasEnRango(prevTailDesde, prevRange[1]);
+    if(!dias.length && !diasCola.length) return false;
     var body='';
-    dias.forEach(function(d){
+    function filaDia(d, totals){
       var dt = fromISO(d.iso);
-      totalT+=d.trabajadas;
-      var tipoLabel = (d.tipo==='vacaciones'?'Vacaciones':(d.tipo==='baja'?'Baja':(d.tipo==='permiso'?('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')):(d.tipo==='medico'?('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')):'Normal')))) + (d.auto?' (auto)':'');
+      var tipoLabel = d.tipo==='vacaciones' ? 'Vacaciones' : (d.tipo==='baja' ? 'Baja' : (d.tipo==='permiso' ? ('Permiso: '+(MOTIVOS_PERMISO[d.permisoMotivo]?MOTIVOS_PERMISO[d.permisoMotivo].label:'')) : (d.tipo==='medico' ? ('Médico'+(d.medSubtipo==='acompanar'?' (acomp.)':'')) : (d.tipo==='festivo' ? 'Festivo' : '—'))));
       var cls='', sign='', diffTxt='—';
       if(d.tipo==='normal' || d.tipo==='medico'){
         var horasExtraRed = roundHalf(d.horasExtra);
-        totalE+=horasExtraRed;
+        totals.e+=horasExtraRed;
         cls = horasExtraRed>0.004?'pos':'';
         sign = horasExtraRed>0.004?'+':'';
         diffTxt = horasExtraRed>0.004 ? sign+fmtHM(horasExtraRed) : '0:00';
       }
-      body += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+tipoLabel+'</td><td>'+escapeHTML(tramosTexto(d.tramos))+'</td><td>'+fmtHM(d.trabajadas)+'</td><td>'+fmtHM(d.teorica)+'</td><td class="'+cls+'">'+diffTxt+'</td></tr>';
-    });
-    body += '<tr class="pr-total"><td colspan="3">TOTAL</td><td>'+fmtHM(totalT)+'</td><td></td><td>'+(totalE>0.004?'+':'')+fmtHM(totalE)+'</td></tr>';
+      return '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+tipoLabel+'</td><td>'+escapeHTML(tramosTexto(d.tramos)||'—')+'</td><td class="'+cls+'">'+diffTxt+'</td></tr>';
+    }
+    if(diasCola.length){
+      var colaTotals = {e:0};
+      body += '<tr class="pr-total"><td colspan="4">Cola de '+monthLabel(prevMonth)+' (cuenta para las horas extra de este mes)</td></tr>';
+      diasCola.forEach(function(d){ body += filaDia(d, colaTotals); });
+      body += '<tr class="pr-total"><td colspan="3">Subtotal cola</td><td>'+(colaTotals.e>0.004?'+':'')+fmtHM(colaTotals.e)+'</td></tr>';
+      body += '<tr class="pr-total"><td colspan="4">'+monthLabel(listadoMonth)+'</td></tr>';
+    }
+    var totals = {e:0};
+    dias.forEach(function(d){ body += filaDia(d, totals); });
+    body += '<tr class="pr-total"><td colspan="3">TOTAL horas extra — '+monthLabel(listadoMonth)+'</td><td>'+(totals.e>0.004?'+':'')+fmtHM(totals.e)+'</td></tr>';
     document.getElementById('pl-title').textContent = 'Horas — '+monthLabel(listadoMonth);
     document.getElementById('pl-sub').textContent = state.perfil.nombre||'';
     document.getElementById('pl-body').innerHTML = body;
