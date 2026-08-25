@@ -1476,6 +1476,7 @@
     var cond = findCondForDate(mrange[1]);
     var diasMes = diasDelMes(extraMonth);
     var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
+    var diasConPlusCompleto = diasMes.filter(function(d){ return d.teoricaBase>0; }).length;
     var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
     var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='permiso' && !d.permisoRetribuido; });
     var totalDiasMes = fromISO(mrange[1]).getDate();
@@ -1489,10 +1490,11 @@
     var salarioBase = cond.salarioBase * factorPresencia;
     var compPersonal = cond.compPersonal * factorPresencia;
     var plusAsistencia = diasConPlus * cond.plusAsistenciaDia;
+    var plusAsistenciaCompleta = diasConPlusCompleto * cond.plusAsistenciaDia;
     var gratifVoluntaria = cond.gratifVoluntariaBase + extraInfo.importeExtra;
     var totalDevengado = salarioBase + compPersonal + plusAsistencia + gratifVoluntaria + subsidioBaja;
 
-    var prorrataAuto = Math.round((totalDevengado/6)*100)/100;
+    var prorrataAuto = Math.round(((cond.salarioBase + cond.compPersonal + plusAsistenciaCompleta) * 2 * totalDiasMes / 365)*100)/100;
     var prorrata = ov.prorrata!=null ? ov.prorrata : prorrataAuto;
     var irpfPct = ov.irpf!=null ? ov.irpf : cond.pctIRPF;
 
@@ -1522,7 +1524,7 @@
       }
       body += '<div class="payslip-row subtotal"><span>Total devengado</span><span class="val">'+fmtEUR(totalDevengado)+'</span></div>';
       body += '<div class="payslip-row section">Deducciones</div>';
-      body += '<div class="payslip-editable-row"><span>Prorrata pagas extra (devengado &divide; 6)</span><input class="payslip-input" id="extra-prorrata-input" value="'+fmtEUR(prorrata)+'"></div>';
+      body += '<div class="payslip-editable-row"><span>Prorrata pagas extra ((SB+CP+PA)&times;2&times;días&divide;365)</span><input class="payslip-input" id="extra-prorrata-input" value="'+fmtEUR(prorrata)+'"></div>';
       body += '<div class="payslip-row deduct"><span>Cont. Comunes ('+fmtH(cond.pctContComunes)+'%)</span><span class="val">&minus;'+fmtEUR(dContComunes)+'</span></div>';
       body += '<div class="payslip-row deduct"><span>Desempleo ('+fmtH(cond.pctDesempleo)+'%)</span><span class="val">&minus;'+fmtEUR(dDesempleo)+'</span></div>';
       body += '<div class="payslip-row deduct"><span>Form. Profesional ('+fmtH(cond.pctFormProf)+'%)</span><span class="val">&minus;'+fmtEUR(dFormProf)+'</span></div>';
@@ -1759,7 +1761,7 @@
       '<div class="field-row"><label>Base reguladora (por día)</label><input class="cond-f" data-f="baseReguladoraDia" value="'+fmtEUR(cond.baseReguladoraDia)+'"></div>'+
       '<p class="field-hint" style="margin-top:-6px;">Normalmente tu base de cotización del mes anterior &divide; 30. Por defecto se estima con el Salario Base.</p>'+
       '<div class="cond-subhead">Deducciones</div>'+
-      '<p class="field-hint" style="margin-top:0;">La prorrata de pagas extra se calcula sola cada mes (lo devengado &divide; 6) y el % de IRPF se ajusta por mes — ambos editables directamente en la pestaña Nómina.</p>'+
+      '<p class="field-hint" style="margin-top:0;">La prorrata de pagas extra se calcula sola cada mes ((Salario Base + Comp. Personal + Plus Asistencia) &times; 2 &times; días del mes &divide; 365, usando Salario Base y Comp. Personal completos aunque haya huelga o baja) y el % de IRPF se ajusta por mes — ambos editables directamente en la pestaña Nómina.</p>'+
       '<div class="field-row"><label>% Cont. Comunes</label><input class="cond-f" data-f="pctContComunes" value="'+fmtH(cond.pctContComunes)+'"></div>'+
       '<div class="field-row"><label>% Desempleo</label><input class="cond-f" data-f="pctDesempleo" value="'+fmtH(cond.pctDesempleo)+'"></div>'+
       '<div class="field-row"><label>% Form. Profesional</label><input class="cond-f" data-f="pctFormProf" value="'+fmtH(cond.pctFormProf)+'"></div>'+
