@@ -135,9 +135,9 @@
   .tp-btn{flex:1;padding:14px;border-radius:12px;font-size:15.5px;font-weight:700;cursor:pointer;border:none;}
   .tp-btn.cancel{background:transparent;border:1px solid var(--paper-300);color:var(--ink-900);}
   .tp-btn.ok{background:var(--rust-500);color:#fff;}
-  .toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink-900);color:var(--paper-100);padding:11px 18px;border-radius:30px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:50;white-space:nowrap;}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  .toast .dot{width:7px;height:7px;border-radius:50%;background:var(--teal-500);}
+  .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.7);background:var(--teal-500);color:#fff;padding:26px 34px;border-radius:22px;font-size:19px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1);z-index:200;box-shadow:0 20px 50px rgba(0,0,0,0.35);text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  .toast .dot{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:22px;}
 
   .month-bar{background:var(--ink-900);border-radius:var(--radius-lg);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
   .month-label{color:var(--paper-100);font-weight:600;font-size:15px;text-transform:capitalize;}
@@ -592,7 +592,7 @@
 
   </main>
 
-  <div class="toast" id="toast"><span class="dot"></span><span id="toast-text">Guardado ✓</span></div>
+  <div class="toast" id="toast"><span class="dot" id="toast-icon">&#10003;</span><span id="toast-text">Guardado</span></div>
 
   <nav class="bottomnav">
     <button class="navbtn active" data-view="registro"><span class="navicon">&#9998;</span>Registro</button>
@@ -896,7 +896,7 @@
     var toast=document.getElementById('toast');
     document.getElementById('toast-text').textContent=msg;
     toast.classList.add('show');
-    setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+    setTimeout(function(){ toast.classList.remove('show'); }, 1500);
   }
 
   var titles = {
@@ -1332,9 +1332,9 @@
     return monthKey(keys[keys.length-1]);
   }
 
-  function diasDelMes(ym){
+  function diasDelMes(ym, proyectar){
     var range = monthDaysRange(ym);
-    var end = range[1] < todayISO() ? range[1] : todayISO();
+    var end = proyectar ? range[1] : (range[1] < todayISO() ? range[1] : todayISO());
     var days = [];
     if(end < range[0]) return days;
     var cur = range[0];
@@ -1439,9 +1439,9 @@
   /* ================= NOMINA ================= */
   var extraMonth = monthKey(todayISO());
 
-  function computeExtraForMonth(ym){
+  function computeExtraForMonth(ym, proyectar){
     var range = extraPeriodRange(ym);
-    var end = range[1] < todayISO() ? range[1] : todayISO();
+    var end = proyectar ? range[1] : (range[1] < todayISO() ? range[1] : todayISO());
     var cur = range[0];
     var totalHorasExtra=0, importeExtra=0;
     var dias=[];
@@ -1474,7 +1474,8 @@
     document.getElementById('extra-month-label').textContent = monthLabel(extraMonth);
     var mrange = monthDaysRange(extraMonth);
     var cond = findCondForDate(mrange[1]);
-    var diasMes = diasDelMes(extraMonth);
+    var esMesActual = extraMonth === monthKey(todayISO());
+    var diasMes = diasDelMes(extraMonth, esMesActual);
     var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
     var diasConPlusCompleto = diasMes.filter(function(d){ return d.teoricaBase>0; }).length;
     var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
@@ -1484,7 +1485,7 @@
     var factorPresencia = diasSinSueldo>0 ? Math.max(0, (totalDiasMes-diasSinSueldo)/totalDiasMes) : 1;
     var subsidioBaja = diasBaja.reduce(function(s,d){ return s+(d.bajaSubsidio||0); }, 0);
 
-    var extraInfo = computeExtraForMonth(extraMonth);
+    var extraInfo = computeExtraForMonth(extraMonth, esMesActual);
     var ov = mesOverride(extraMonth);
 
     var salarioBase = cond.salarioBase * factorPresencia;
@@ -1506,7 +1507,7 @@
     var totalDeducido = dContComunes+dDesempleo+dFormProf+dIRPF;
     var liquido = totalDevengado - totalDeducido;
 
-    document.getElementById('extra-head-sub').textContent = diasMes.length ? (diasMes.length+' días registrados') : 'Sin datos este mes';
+    document.getElementById('extra-head-sub').textContent = diasMes.length ? (diasMes.length+' días' + (esMesActual ? ' — estimación asumiendo jornada normal el resto del mes' : ' registrados')) : 'Sin datos este mes';
 
     var body='';
     if(diasMes.length===0){
