@@ -1357,6 +1357,19 @@
     }
     return days;
   }
+  function sabadosConPlusEnRango(desde, hasta, proyectar){
+    var end = proyectar ? hasta : (hasta < todayISO() ? hasta : todayISO());
+    var count = 0;
+    if(end < desde) return count;
+    var cur = desde;
+    while(cur<=end){
+      if(fromISO(cur).getDay()===6 && !state.entries[cur] && !isFestivo(cur)){
+        count++;
+      }
+      cur = addDaysISO(cur,1);
+    }
+    return count;
+  }
 
   function tramosTexto(tramos){
     return (tramos||[]).filter(function(t){return t.entrada&&t.salida;}).map(function(t){return t.entrada+'-'+t.salida;}).join(', ');
@@ -1477,7 +1490,15 @@
     var esMesActual = extraMonth === monthKey(todayISO());
     var diasMes = diasDelMes(extraMonth, esMesActual);
     var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
+    diasConPlus += sabadosConPlusEnRango(mrange[0], mrange[1], esMesActual);
     var diasConPlusCompleto = diasMes.filter(function(d){ return d.teoricaBase>0; }).length;
+    (function(){
+      var curS = mrange[0];
+      while(curS<=mrange[1]){
+        if(fromISO(curS).getDay()===6 && !isFestivo(curS)) diasConPlusCompleto++;
+        curS = addDaysISO(curS,1);
+      }
+    })();
     var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
     var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='permiso' && !d.permisoRetribuido; });
     var totalDiasMes = fromISO(mrange[1]).getDate();
