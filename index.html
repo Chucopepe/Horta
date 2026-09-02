@@ -222,6 +222,11 @@
   .payslip-row{display:flex;justify-content:space-between;padding:11px 18px;border-bottom:1px dashed var(--paper-300);font-size:13.5px;}
   .payslip-row .val{font-family:var(--font-display);font-weight:600;}
   .payslip-row.section{background:var(--paper-100);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid var(--paper-300);}
+  .payslip-row.toggle-hdr{cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .payslip-row.section.toggle-hdr{justify-content:space-between;align-items:center;}
+  .payslip-row.toggle-hdr .chev{font-family:var(--font-display);font-size:12px;color:var(--ink-700);transition:transform .15s ease;display:inline-block;}
+  .payslip-row.total.toggle-hdr .chev{color:var(--rust-500);margin-left:4px;}
+  .payslip-row.toggle-hdr.open .chev{transform:rotate(180deg);}
   .payslip-row.subtotal{background:var(--paper-100);font-weight:700;}
   .payslip-row.total{background:var(--ink-900);color:var(--paper-100);font-weight:700;font-size:16px;padding:20px 16px;border-bottom:none;}
   .payslip-row.total .val{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-0.01em;color:#F0C24E;}
@@ -659,7 +664,8 @@
       condiciones:[
         { id:'c2026', vigenteDesde:'2026-01-01',
           salarioBase:0, compPersonal:0, plusAsistenciaDia:0, gratifVoluntariaBase:0,
-          pctContComunes:0, pctDesempleo:0, pctFormProf:0, pctIRPF:0, pctSSEmpresa:30,
+          pctContComunes:0, pctDesempleo:0, pctFormProf:0, pctIRPF:0,
+          pctEmpContComunes:24.35, pctEmpIT:2.00, pctEmpIMS:1.85, pctEmpDesempleo:5.50, pctEmpFormProf:0.60, pctEmpFogasa:0.20,
           precioHoraExtraLV:0, precioHoraExtraSab:0, baseReguladoraDia:0,
           tiempoPorDia:7.81666667, viernesTardeLibre:true,
           jornada:{ '0':0, '1':8.31666667, '2':8.31666667, '3':8.31666667, '4':8.31666667, '5':6, '6':0 } }
@@ -689,7 +695,19 @@
             if(c.tiempoPorDia==null){ c.tiempoPorDia = c.jornada && c.jornada['1'] ? c.jornada['1'] : 8; }
             if(c.viernesTardeLibre==null){ c.viernesTardeLibre = false; }
             if(c.baseReguladoraDia==null){ c.baseReguladoraDia = Math.round(((c.salarioBase||0)/30)*100)/100; }
-            if(c.pctSSEmpresa==null){ c.pctSSEmpresa = 30; }
+            if(c.pctEmpATEP!=null && c.pctEmpIT==null){
+              c.pctEmpContComunes = 24.35;
+              c.pctEmpIT = 2.00;
+              c.pctEmpIMS = 1.85;
+              delete c.pctEmpATEP;
+              delete c.pctEmpMei;
+            }
+            if(c.pctEmpContComunes==null){ c.pctEmpContComunes = 24.35; }
+            if(c.pctEmpIT==null){ c.pctEmpIT = 2.00; }
+            if(c.pctEmpIMS==null){ c.pctEmpIMS = 1.85; }
+            if(c.pctEmpDesempleo==null){ c.pctEmpDesempleo = 5.50; }
+            if(c.pctEmpFormProf==null){ c.pctEmpFormProf = 0.60; }
+            if(c.pctEmpFogasa==null){ c.pctEmpFogasa = 0.20; }
           });
           return parsed;
         }
@@ -1533,7 +1551,13 @@
     var dIRPF = totalDevengado * irpfPct/100;
     var totalDeducido = dContComunes+dDesempleo+dFormProf+dIRPF;
     var liquido = totalDevengado - totalDeducido;
-    var ssEmpresa = bcConCom * (cond.pctSSEmpresa||0)/100;
+    var eContComunes = bcConCom * (cond.pctEmpContComunes||0)/100;
+    var eIT = bcConCom * (cond.pctEmpIT||0)/100;
+    var eIMS = bcConCom * (cond.pctEmpIMS||0)/100;
+    var eDesempleo = bcConCom * (cond.pctEmpDesempleo||0)/100;
+    var eFormProf = bcConCom * (cond.pctEmpFormProf||0)/100;
+    var eFogasa = bcConCom * (cond.pctEmpFogasa||0)/100;
+    var ssEmpresa = eContComunes+eIT+eIMS+eDesempleo+eFormProf+eFogasa;
     var costeTotalEmpresa = bcConCom + ssEmpresa;
 
     document.getElementById('extra-head-sub').textContent = diasMes.length ? (diasMes.length+' días' + (esMesActual ? ' — estimación asumiendo jornada normal el resto del mes' : ' registrados')) : 'Sin datos este mes';
@@ -1542,6 +1566,9 @@
     if(diasMes.length===0){
       body = '<div class="payslip-row" style="justify-content:center;color:var(--muted);">Sin jornadas registradas este mes.</div>';
     } else {
+      body += '<div class="payslip-row total toggle-hdr" data-target="liquido-detail"><span>Líquido estimado</span><span class="val">'+fmtEUR(liquido)+' <span class="chev">&#9662;</span></span></div>';
+      body += '<div class="collapsible" id="liquido-detail" style="display:none;">';
+      body += '<div class="payslip-row section">Devengos</div>';
       body += '<div class="payslip-row"><span>Salario Base'+(diasSinSueldo?' ('+(totalDiasMes-diasSinSueldo)+'/'+totalDiasMes+' días)':'')+'</span><span class="val">'+fmtEUR(salarioBase)+'</span></div>';
       body += '<div class="payslip-row"><span>Comp. Personal'+(diasSinSueldo?' ('+(totalDiasMes-diasSinSueldo)+'/'+totalDiasMes+' días)':'')+'</span><span class="val">'+fmtEUR(compPersonal)+'</span></div>';
       body += '<div class="payslip-row"><span>Plus Asistencia ('+diasConPlus+' &times; '+fmtEUR(cond.plusAsistenciaDia)+')</span><span class="val">'+fmtEUR(plusAsistencia)+'</span></div>';
@@ -1560,17 +1587,34 @@
       body += '<div class="payslip-row deduct"><span>Form. Profesional ('+fmtH(cond.pctFormProf)+'%)</span><span class="val">&minus;'+fmtEUR(dFormProf)+'</span></div>';
       body += '<div class="payslip-editable-row"><span>% IRPF este mes</span><input class="payslip-input" id="extra-irpf-input" value="'+fmtH(irpfPct)+'"></div>';
       body += '<div class="payslip-row deduct"><span>Importe IRPF</span><span class="val">&minus;'+fmtEUR(dIRPF)+'</span></div>';
-      body += '<div class="payslip-row total"><span>Líquido estimado</span><span class="val">'+fmtEUR(liquido)+'</span></div>';
       if(diasBaja.length){
         body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">El subsidio de IT es una estimación (base reguladora configurable en Ajustes). Verifica contra tu nómina real.</div>';
       }
-      body += '<div class="payslip-row section" style="margin-top:10px;">Coste para la empresa (no es tu sueldo)</div>';
+      body += '</div>';
+
+      body += '<div class="payslip-row section toggle-hdr" data-target="empresa-detail" style="margin-top:10px;"><span>Coste para la empresa (no es tu sueldo)</span><span class="chev">&#9662;</span></div>';
+      body += '<div class="collapsible" id="empresa-detail" style="display:none;">';
       body += '<div class="payslip-row"><span>Bruto + prorrata</span><span class="val">'+fmtEUR(bcConCom)+'</span></div>';
-      body += '<div class="payslip-row"><span>Seg. Social empresa ('+fmtH(cond.pctSSEmpresa||0)+'%)</span><span class="val">+'+fmtEUR(ssEmpresa)+'</span></div>';
-      body += '<div class="payslip-row total" style="background:var(--blue-700);"><span>Coste total</span><span class="val">'+fmtEUR(costeTotalEmpresa)+'</span></div>';
-      body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">Estimación orientativa — la Seg. Social a cargo de la empresa no aparece en tu nómina; ajusta el % en Ajustes si conoces el real.</div>';
+      body += '<div class="payslip-row"><span>Cont. Comunes ('+fmtH(cond.pctEmpContComunes||0)+'%)</span><span class="val">+'+fmtEUR(eContComunes)+'</span></div>';
+      body += '<div class="payslip-row"><span>Empresa IT ('+fmtH(cond.pctEmpIT||0)+'%)</span><span class="val">+'+fmtEUR(eIT)+'</span></div>';
+      body += '<div class="payslip-row"><span>Empresa IMS ('+fmtH(cond.pctEmpIMS||0)+'%)</span><span class="val">+'+fmtEUR(eIMS)+'</span></div>';
+      body += '<div class="payslip-row"><span>Desempleo ('+fmtH(cond.pctEmpDesempleo||0)+'%)</span><span class="val">+'+fmtEUR(eDesempleo)+'</span></div>';
+      body += '<div class="payslip-row"><span>Form. Profesional ('+fmtH(cond.pctEmpFormProf||0)+'%)</span><span class="val">+'+fmtEUR(eFormProf)+'</span></div>';
+      body += '<div class="payslip-row"><span>FOGASA ('+fmtH(cond.pctEmpFogasa||0)+'%)</span><span class="val">+'+fmtEUR(eFogasa)+'</span></div>';
+      body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">Tipos reales de tu nómina (verificados contra la Base Cont. Común).</div>';
+      body += '</div>';
+      body += '<div class="payslip-row total" style="background:var(--teal-500);"><span>Coste total</span><span class="val">'+fmtEUR(costeTotalEmpresa)+'</span></div>';
     }
     document.getElementById('extra-body').innerHTML = body;
+
+    document.querySelectorAll('#extra-body .toggle-hdr').forEach(function(hdr){
+      hdr.addEventListener('click', function(){
+        var target = document.getElementById(hdr.getAttribute('data-target'));
+        var isOpen = target.style.display !== 'none';
+        target.style.display = isOpen ? 'none' : 'block';
+        hdr.classList.toggle('open', !isOpen);
+      });
+    });
 
     if(diasMes.length>0){
       document.getElementById('extra-prorrata-input').addEventListener('change', function(e){
@@ -1596,6 +1640,7 @@
       gratifVoluntaria:gratifVoluntaria, subsidioBaja:subsidioBaja, diasBaja:diasBaja.length, extraInfo:extraInfo, totalDevengado:totalDevengado, prorrata:prorrata, irpfPct:irpfPct,
       dContComunes:dContComunes, dDesempleo:dDesempleo, dFormProf:dFormProf, dIRPF:dIRPF, totalDeducido:totalDeducido, liquido:liquido,
       bcConCom:bcConCom, ssEmpresa:ssEmpresa, costeTotalEmpresa:costeTotalEmpresa,
+      eContComunes:eContComunes, eIT:eIT, eIMS:eIMS, eDesempleo:eDesempleo, eFormProf:eFormProf, eFogasa:eFogasa,
       diasMes:diasMes };
   }
   document.getElementById('btn-extra-month-prev').addEventListener('click', function(){ extraMonth=addMonths(extraMonth,-1); renderExtra(); });
@@ -1732,7 +1777,7 @@
     document.getElementById('pn-body').innerHTML = b;
     document.getElementById('pn-foot').innerHTML = '';
     document.getElementById('pn-liquido').textContent = fmtEUR(data.liquido);
-    document.getElementById('pn-empresa-costes').innerHTML = '<tr><td>Bruto + prorrata</td><td>'+fmtEUR(data.bcConCom)+'</td></tr><tr><td>Seg. Social empresa ('+fmtH(data.cond.pctSSEmpresa||0)+'%)</td><td>+'+fmtEUR(data.ssEmpresa)+'</td></tr><tr class="pr-subtotal"><td>Coste total</td><td>'+fmtEUR(data.costeTotalEmpresa)+'</td></tr>';
+    document.getElementById('pn-empresa-costes').innerHTML = '<tr><td>Bruto + prorrata</td><td>'+fmtEUR(data.bcConCom)+'</td></tr><tr><td>Cont. Comunes ('+fmtH(data.cond.pctEmpContComunes||0)+'%)</td><td>+'+fmtEUR(data.eContComunes)+'</td></tr><tr><td>Empresa IT ('+fmtH(data.cond.pctEmpIT||0)+'%)</td><td>+'+fmtEUR(data.eIT)+'</td></tr><tr><td>Empresa IMS ('+fmtH(data.cond.pctEmpIMS||0)+'%)</td><td>+'+fmtEUR(data.eIMS)+'</td></tr><tr><td>Desempleo ('+fmtH(data.cond.pctEmpDesempleo||0)+'%)</td><td>+'+fmtEUR(data.eDesempleo)+'</td></tr><tr><td>Form. Profesional ('+fmtH(data.cond.pctEmpFormProf||0)+'%)</td><td>+'+fmtEUR(data.eFormProf)+'</td></tr><tr><td>FOGASA ('+fmtH(data.cond.pctEmpFogasa||0)+'%)</td><td>+'+fmtEUR(data.eFogasa)+'</td></tr><tr class="pr-subtotal"><td>Coste total</td><td>'+fmtEUR(data.costeTotalEmpresa)+'</td></tr>';
 
     var fb='';
     data.extraInfo.dias.forEach(function(d){
@@ -1803,8 +1848,13 @@
       '<div class="field-row"><label>% Form. Profesional</label><input class="cond-f" data-f="pctFormProf" value="'+fmtH(cond.pctFormProf)+'"></div>'+
       '<div class="field-row"><label>% IRPF (por defecto)</label><input class="cond-f" data-f="pctIRPF" value="'+fmtH(cond.pctIRPF)+'"></div>'+
       '<div class="cond-subhead">Coste para la empresa</div>'+
-      '<div class="field-row"><label>% Seg. Social a cargo empresa</label><input class="cond-f" data-f="pctSSEmpresa" value="'+fmtH(cond.pctSSEmpresa)+'"></div>'+
-      '<p class="field-hint" style="margin-top:-6px;">Contingencias comunes, desempleo, FOGASA y formación a cargo de la empresa (no aparece en tu nómina). 30% es una estimación orientativa del sector — ajústalo si conoces el real.</p>'+
+      '<div class="field-row"><label>% Cont. Comunes empresa</label><input class="cond-f" data-f="pctEmpContComunes" value="'+fmtH(cond.pctEmpContComunes)+'"></div>'+
+      '<div class="field-row"><label>% Empresa IT</label><input class="cond-f" data-f="pctEmpIT" value="'+fmtH(cond.pctEmpIT)+'"></div>'+
+      '<div class="field-row"><label>% Empresa IMS</label><input class="cond-f" data-f="pctEmpIMS" value="'+fmtH(cond.pctEmpIMS)+'"></div>'+
+      '<div class="field-row"><label>% Desempleo empresa</label><input class="cond-f" data-f="pctEmpDesempleo" value="'+fmtH(cond.pctEmpDesempleo)+'"></div>'+
+      '<div class="field-row"><label>% Form. Profesional empresa</label><input class="cond-f" data-f="pctEmpFormProf" value="'+fmtH(cond.pctEmpFormProf)+'"></div>'+
+      '<div class="field-row"><label>% FOGASA</label><input class="cond-f" data-f="pctEmpFogasa" value="'+fmtH(cond.pctEmpFogasa)+'"></div>'+
+      '<p class="field-hint" style="margin-top:-6px;">No aparecen en tu nómina, son coste de la empresa. Valores verificados contra tu nómina real de agosto 2026 (IT + IMS son las dos partes de AT/EP).</p>'+
       '<div class="cond-subhead">Jornada exigida</div>'+
       '<div class="field-row"><label>Tiempo por día (formato h:mm)</label><input class="cond-tiempodia" value="'+fmtHM(cond.tiempoPorDia).replace(' h','')+'"></div>'+
       '<label class="check-row"><input type="checkbox" class="cond-viernes"'+(cond.viernesTardeLibre?' checked':'')+'> Viernes tarde libre (+30 min L-J, viernes 6:00)</label>'+
