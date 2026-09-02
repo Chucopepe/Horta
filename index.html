@@ -223,8 +223,8 @@
   .payslip-row .val{font-family:var(--font-display);font-weight:600;}
   .payslip-row.section{background:var(--paper-100);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid var(--paper-300);}
   .payslip-row.subtotal{background:var(--paper-100);font-weight:700;}
-  .payslip-row.total{background:var(--ink-900);color:var(--paper-100);font-weight:700;font-size:15px;border-bottom:none;}
-  .payslip-row.total .val{font-family:var(--font-display);color:var(--rust-500);font-size:17px;}
+  .payslip-row.total{background:var(--ink-900);color:var(--paper-100);font-weight:700;font-size:16px;padding:20px 16px;border-bottom:none;}
+  .payslip-row.total .val{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-0.01em;color:#F0C24E;}
   .payslip-row.deduct .val{color:var(--coral-700);}
   .payslip-editable-row{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px dashed var(--paper-300);font-size:13.5px;background:rgba(201,98,43,0.05);}
   .payslip-editable-row span{color:var(--text);}
@@ -619,9 +619,13 @@
     <tfoot id="pn-foot"></tfoot>
   </table>
   <p class="pr-liquido">Líquido estimado: <span id="pn-liquido">0,00 €</span></p>
+  <p class="pr-title" style="font-size:10px;">Coste para la empresa (no es tu sueldo)</p>
+  <table class="pr-table pr-concepts">
+    <tbody id="pn-empresa-costes"></tbody>
+  </table>
   <p class="pr-title" style="font-size:10px;">Detalle de fichajes del periodo de horas extra</p>
   <table class="pr-grid">
-    <thead><tr><th>Día</th><th>Horario real</th><th>Horario estipulado</th><th>Extra</th></tr></thead>
+    <thead><tr><th>Día</th><th>Horario real</th><th>Extra</th></tr></thead>
     <tbody id="pn-fichajes"></tbody>
   </table>
   <p class="pr-footnote">Documento generado por la app a partir de las jornadas registradas y las condiciones configuradas. No sustituye a la nómina oficial.</p>
@@ -655,7 +659,7 @@
       condiciones:[
         { id:'c2026', vigenteDesde:'2026-01-01',
           salarioBase:0, compPersonal:0, plusAsistenciaDia:0, gratifVoluntariaBase:0,
-          pctContComunes:0, pctDesempleo:0, pctFormProf:0, pctIRPF:0,
+          pctContComunes:0, pctDesempleo:0, pctFormProf:0, pctIRPF:0, pctSSEmpresa:30,
           precioHoraExtraLV:0, precioHoraExtraSab:0, baseReguladoraDia:0,
           tiempoPorDia:7.81666667, viernesTardeLibre:true,
           jornada:{ '0':0, '1':8.31666667, '2':8.31666667, '3':8.31666667, '4':8.31666667, '5':6, '6':0 } }
@@ -685,6 +689,7 @@
             if(c.tiempoPorDia==null){ c.tiempoPorDia = c.jornada && c.jornada['1'] ? c.jornada['1'] : 8; }
             if(c.viernesTardeLibre==null){ c.viernesTardeLibre = false; }
             if(c.baseReguladoraDia==null){ c.baseReguladoraDia = Math.round(((c.salarioBase||0)/30)*100)/100; }
+            if(c.pctSSEmpresa==null){ c.pctSSEmpresa = 30; }
           });
           return parsed;
         }
@@ -1397,7 +1402,8 @@
     for(var day=1; day<=lastDay; day++){
       var iso = listadoMonth+'-'+pad2(day);
       var isFuture = iso>today;
-      var info = isFuture ? null : diaInfo(iso);
+      var info = diaInfo(iso);
+      if(isFuture && info && info.auto){ info = null; }
       var dow = fromISO(iso).getDay();
       var cls = 'cal-cell';
       if(iso===today) cls += ' today';
@@ -1424,9 +1430,9 @@
           var deltaClass = info.horasExtra>0.004?'positive':'neutral';
           inner += '<span class="cal-delta '+deltaClass+'">'+fmtCompactExtra(info.horasExtra)+'</span>';
         }
-      } else if(!isFuture && dow===6){
+      } else if(dow===6){
         cls += ' nonwork-sat';
-      } else if(!isFuture && (dow===0 || isFestivo(iso))){
+      } else if(dow===0 || isFestivo(iso)){
         cls += ' nonwork-rest';
       }
       gridHTML += '<div class="'+cls+'" data-date="'+iso+'">'+inner+'</div>';
@@ -1527,6 +1533,8 @@
     var dIRPF = totalDevengado * irpfPct/100;
     var totalDeducido = dContComunes+dDesempleo+dFormProf+dIRPF;
     var liquido = totalDevengado - totalDeducido;
+    var ssEmpresa = bcConCom * (cond.pctSSEmpresa||0)/100;
+    var costeTotalEmpresa = bcConCom + ssEmpresa;
 
     document.getElementById('extra-head-sub').textContent = diasMes.length ? (diasMes.length+' días' + (esMesActual ? ' — estimación asumiendo jornada normal el resto del mes' : ' registrados')) : 'Sin datos este mes';
 
@@ -1556,6 +1564,11 @@
       if(diasBaja.length){
         body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">El subsidio de IT es una estimación (base reguladora configurable en Ajustes). Verifica contra tu nómina real.</div>';
       }
+      body += '<div class="payslip-row section" style="margin-top:10px;">Coste para la empresa (no es tu sueldo)</div>';
+      body += '<div class="payslip-row"><span>Bruto + prorrata</span><span class="val">'+fmtEUR(bcConCom)+'</span></div>';
+      body += '<div class="payslip-row"><span>Seg. Social empresa ('+fmtH(cond.pctSSEmpresa||0)+'%)</span><span class="val">+'+fmtEUR(ssEmpresa)+'</span></div>';
+      body += '<div class="payslip-row total" style="background:var(--blue-700);"><span>Coste total</span><span class="val">'+fmtEUR(costeTotalEmpresa)+'</span></div>';
+      body += '<div class="payslip-row" style="font-size:11px;color:var(--muted);">Estimación orientativa — la Seg. Social a cargo de la empresa no aparece en tu nómina; ajusta el % en Ajustes si conoces el real.</div>';
     }
     document.getElementById('extra-body').innerHTML = body;
 
@@ -1582,6 +1595,7 @@
     return { cond:cond, salarioBase:salarioBase, compPersonal:compPersonal, plusAsistencia:plusAsistencia, diasConPlus:diasConPlus,
       gratifVoluntaria:gratifVoluntaria, subsidioBaja:subsidioBaja, diasBaja:diasBaja.length, extraInfo:extraInfo, totalDevengado:totalDevengado, prorrata:prorrata, irpfPct:irpfPct,
       dContComunes:dContComunes, dDesempleo:dDesempleo, dFormProf:dFormProf, dIRPF:dIRPF, totalDeducido:totalDeducido, liquido:liquido,
+      bcConCom:bcConCom, ssEmpresa:ssEmpresa, costeTotalEmpresa:costeTotalEmpresa,
       diasMes:diasMes };
   }
   document.getElementById('btn-extra-month-prev').addEventListener('click', function(){ extraMonth=addMonths(extraMonth,-1); renderExtra(); });
@@ -1718,14 +1732,14 @@
     document.getElementById('pn-body').innerHTML = b;
     document.getElementById('pn-foot').innerHTML = '';
     document.getElementById('pn-liquido').textContent = fmtEUR(data.liquido);
+    document.getElementById('pn-empresa-costes').innerHTML = '<tr><td>Bruto + prorrata</td><td>'+fmtEUR(data.bcConCom)+'</td></tr><tr><td>Seg. Social empresa ('+fmtH(data.cond.pctSSEmpresa||0)+'%)</td><td>+'+fmtEUR(data.ssEmpresa)+'</td></tr><tr class="pr-subtotal"><td>Coste total</td><td>'+fmtEUR(data.costeTotalEmpresa)+'</td></tr>';
 
     var fb='';
     data.extraInfo.dias.forEach(function(d){
       var dt = fromISO(d.iso);
       var cls = d.horasRedondeadas>0.004?'pos':'';
       var horarioReal = d.info.tipo==='normal' ? (tramosTexto(d.info.tramos) || '—') : (d.info.tipo==='medico' ? 'Médico' : '—');
-      var horarioEstip = d.estipulado && d.estipulado.length ? tramosTexto(d.estipulado) : '—';
-      fb += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+escapeHTML(horarioReal)+'</td><td>'+escapeHTML(horarioEstip)+'</td><td class="'+cls+'">'+(d.horasRedondeadas>0.004?'+'+fmtHM(d.horasRedondeadas):'—')+'</td></tr>';
+      fb += '<tr><td>'+pad2(dt.getDate())+' '+DOW3[dt.getDay()]+'</td><td>'+escapeHTML(horarioReal)+'</td><td class="'+cls+'">'+(d.horasRedondeadas>0.004?'+'+fmtHM(d.horasRedondeadas):'—')+'</td></tr>';
     });
     document.getElementById('pn-fichajes').innerHTML = fb;
 
@@ -1788,6 +1802,9 @@
       '<div class="field-row"><label>% Desempleo</label><input class="cond-f" data-f="pctDesempleo" value="'+fmtH(cond.pctDesempleo)+'"></div>'+
       '<div class="field-row"><label>% Form. Profesional</label><input class="cond-f" data-f="pctFormProf" value="'+fmtH(cond.pctFormProf)+'"></div>'+
       '<div class="field-row"><label>% IRPF (por defecto)</label><input class="cond-f" data-f="pctIRPF" value="'+fmtH(cond.pctIRPF)+'"></div>'+
+      '<div class="cond-subhead">Coste para la empresa</div>'+
+      '<div class="field-row"><label>% Seg. Social a cargo empresa</label><input class="cond-f" data-f="pctSSEmpresa" value="'+fmtH(cond.pctSSEmpresa)+'"></div>'+
+      '<p class="field-hint" style="margin-top:-6px;">Contingencias comunes, desempleo, FOGASA y formación a cargo de la empresa (no aparece en tu nómina). 30% es una estimación orientativa del sector — ajústalo si conoces el real.</p>'+
       '<div class="cond-subhead">Jornada exigida</div>'+
       '<div class="field-row"><label>Tiempo por día (formato h:mm)</label><input class="cond-tiempodia" value="'+fmtHM(cond.tiempoPorDia).replace(' h','')+'"></div>'+
       '<label class="check-row"><input type="checkbox" class="cond-viernes"'+(cond.viernesTardeLibre?' checked':'')+'> Viernes tarde libre (+30 min L-J, viernes 6:00)</label>'+
