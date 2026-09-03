@@ -231,9 +231,10 @@
   .payslip-row.total{background:var(--ink-900);color:var(--paper-100);font-weight:700;font-size:16px;padding:20px 16px;border-bottom:none;}
   .payslip-row.total .val{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-0.01em;color:#F0C24E;}
   .payslip-row.deduct .val{color:var(--coral-700);}
-  .payslip-editable-row{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px dashed var(--paper-300);font-size:13.5px;background:rgba(201,98,43,0.05);}
-  .payslip-editable-row span{color:var(--text);}
-  .payslip-input{width:88px;text-align:right;border:1px solid var(--rust-500);background:#fff;border-radius:8px;padding:6px 8px;font-family:var(--font-display);font-size:13.5px;color:var(--rust-700);font-weight:600;}
+  .payslip-editable-row{display:flex;justify-content:space-between;align-items:center;padding:10px 18px 10px 15px;border-bottom:1px dashed var(--paper-300);border-left:3px solid var(--rust-500);font-size:13.5px;background:rgba(201,98,43,0.09);}
+  .payslip-editable-row span{color:var(--text);font-weight:600;}
+  .payslip-editable-row span::after{content:" \270E";font-size:11px;color:var(--rust-500);}
+  .payslip-input{width:88px;text-align:right;border:1.5px solid var(--rust-500);background:#fff;border-radius:8px;padding:7px 9px;font-family:var(--font-display);font-size:14px;color:var(--rust-700);font-weight:700;box-shadow:0 0 0 3px rgba(201,98,43,0.14);}
   .btn-revisada{width:100%;background:transparent;border:1.5px solid var(--paper-300);color:var(--muted);border-radius:var(--radius-sm);padding:13px;font-size:14px;font-weight:700;margin-top:10px;cursor:pointer;}
   .btn-revisada.revisada{background:var(--teal-500);border-color:var(--teal-500);color:#fff;}
 
@@ -647,6 +648,42 @@
 </div>
 
 <script>
+/* ============================================================
+   CONTROL DE HORAS — app de fichaje y nómina estimada
+   Convenio: Industrias Siderometalúrgicas de A Coruña, 2026-2029.
+
+   MODELO DE DATOS (ver defaultState / loadState):
+   - state.entries[iso]: un registro por día con datos explícitos
+     (tipo: normal|vacaciones|medico|festivo|baja|permiso, tramos, etc).
+     Un día SIN entrada se autocompleta con el horario por defecto
+     (ver diaInfo / synthesizeTramosForDay) — no hace falta fichar
+     cada día para que la app calcule bien.
+   - state.festivos: array de fechas ISO, independiente de entries.
+   - state.condiciones: histórico de salario/precios/jornada con
+     fecha de vigencia — cada jornada usa las condiciones activas
+     en su propia fecha (ver findCondForDate).
+   - state.mesOverrides: ajustes manuales de prorrata/IRPF por mes,
+     ya que ninguna fórmula reproduce el redondeo interno exacto
+     de nómina de la empresa al céntimo.
+
+   CONCEPTOS CLAVE:
+   - "Horas extra" se miden por RELOJ (antes de la entrada
+     estipulada / después de la salida estipulada), no por
+     duración total trabajada — ver calcularHorasExtraClock.
+   - Las horas extra se redondean SIEMPRE HACIA ABAJO a la media
+     hora (ver roundHalf), y a precio distinto entre semana vs
+     sábado/domingo/festivo.
+   - Las horas extra "de nómina" se cuentan en un periodo 25→24
+     (no el mes natural) — ver extraPeriodRange /
+     computeExtraForMonth. El Listado usa mes natural para todo
+     lo demás.
+   - Plus de Asistencia cuenta de lunes a SÁBADO aunque el sábado
+     no se trabaje (Art. 52 convenio) — ver sabadosConPlusEnRango.
+   - La prorrata de pagas extra usa Salario Base y Comp. Personal
+     COMPLETOS (sin reducir por baja/huelga) más el Plus de
+     Asistencia — confirmado empíricamente comparando nóminas
+     reales con y sin huelga que dieron prorratas idénticas.
+   ============================================================ */
 (function(){
   var STORAGE_KEY = 'horasExtraApp_v2';
   var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -728,6 +765,8 @@
   function addMonths(ym,n){ var p=ym.split('-').map(Number); var d=new Date(p[0],p[1]-1+n,1); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
   function monthDaysRange(ym){ var p=ym.split('-').map(Number); var start=p[0]+'-'+pad2(p[1])+'-01'; var last=new Date(p[0],p[1],0).getDate(); var end=p[0]+'-'+pad2(p[1])+'-'+pad2(last); return [start,end]; }
   function fechaEspanola(iso){ if(!iso) return ''; var d=fromISO(iso); return pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear(); }
+  // Periodo que usa la empresa para las horas extra de la nómina de un
+  // mes: del 25 del mes anterior al 24 de este mes (NO el mes natural).
   function extraPeriodRange(ym){
     var p = ym.split('-').map(Number);
     var endDate = new Date(p[0],p[1]-1,24);
@@ -798,6 +837,9 @@
   function isFestivo(iso){
     return (state.festivos||[]).indexOf(iso) > -1;
   }
+  // Horas de jornada exigidas ese día según el convenio/condición vigente.
+  // 0 si es festivo o si ese día de la semana no tiene jornada (domingo, y
+  // sábado salvo que se configure lo contrario).
   function jornadaTeoricaDia(iso){
     if(isFestivo(iso)) return 0;
     var cond = findCondForDate(iso);
@@ -806,6 +848,13 @@
     return cond.jornada[String(dow)] || 0;
   }
 
+  // Genera los tramos "esperados" de un día a partir del horario por
+  // defecto (Ajustes), recortados a la duración exigida (teoricaBase).
+  // Si el horario por defecto YA encaja (p.ej. un día normal L-J), se
+  // devuelve tal cual. Si es un día corto (viernes con tarde libre), se
+  // recorta desde la entrada — y el viernes usa SIEMPRE 8:00 como entrada
+  // fija (no la del horario por defecto), porque así lo especificó el
+  // usuario independientemente de a qué hora entre el resto de la semana.
   function synthesizeTramosForDay(teoricaBase, iso){
     var base = JSON.parse(JSON.stringify(state.defecto.tramos)).filter(function(t){return t.entrada&&t.salida;});
     if(!base.length) return base;
@@ -824,11 +873,21 @@
     var endMM = endMin%60;
     return [{ entrada: startTime, salida: pad2(endHH)+':'+pad2(endMM) }];
   }
+  // Horario estipulado de un día concreto: [] si no hay jornada exigida
+  // (festivo/no laborable), si no el horario sintetizado del defecto.
+  // Es la referencia contra la que se compara el fichaje real para
+  // calcular horas extra (ver calcularHorasExtraClock).
   function horarioEstipuladoDia(iso){
     var teoricaBase = jornadaTeoricaDia(iso);
     if(teoricaBase<=0) return [];
     return synthesizeTramosForDay(teoricaBase, iso);
   }
+  // Horas extra = lo que se sale del horario estipulado, POR RELOJ:
+  // minutos entrados antes de la hora de entrada estipulada, más minutos
+  // salidos después de la hora de salida estipulada. NO es "duración
+  // total trabajada menos duración exigida" — alguien que desplaza todo
+  // su horario una hora (entra y sale una hora más tarde) no genera
+  // horas extra, porque sigue dentro de una ventana de la misma duración.
   function calcularHorasExtraClock(tramosActuales, tramosEstipulados){
     var actuales = (tramosActuales||[]).filter(function(t){return t.entrada&&t.salida;});
     if(!actuales.length) return 0;
@@ -845,6 +904,11 @@
     var despues = Math.max(0, actSalidaMin - estSalidaMin);
     return (antes+despues)/60;
   }
+  // Nº de día dentro del "episodio" de baja actual (cuenta hacia atrás
+  // mientras haya días consecutivos de baja con el mismo subtipo). No se
+  // guarda una fecha de inicio explícita: se recalcula cada vez mirando
+  // hacia atrás, así que editar/ampliar un rango de baja ya guardado
+  // sigue funcionando bien sin tener que actualizar nada más.
   function bajaDiaEpisodio(iso){
     var subtipo = state.entries[iso] ? state.entries[iso].bajaSubtipo : null;
     var count = 1;
@@ -859,12 +923,20 @@
     }
     return count;
   }
+  // % de la base reguladora que paga el subsidio de IT ese día, según el
+  // convenio (Art. 64): accidente de trabajo/enfermedad profesional y
+  // hospitalización pagan 100% desde el día 1; enfermedad común sin
+  // hospitalizar paga 60% los días 1-20 y 75% desde el día 21.
   function bajaPorcentaje(iso, entry){
     if(entry.bajaSubtipo==='profesional') return 1.0;
     if(entry.bajaHospitalizacion) return 1.0;
     var diaNum = bajaDiaEpisodio(iso);
     return diaNum<=20 ? 0.60 : 0.75;
   }
+  // Catálogo de motivos de "Permiso" (Art. 31 del convenio + huelga).
+  // "retribuido:true" = cuenta para el Plus de Asistencia y no toca el
+  // sueldo (como vacaciones). "retribuido:false" (huelga, sin sueldo) =
+  // reduce Salario Base y Comp. Personal ese mes, sin ningún subsidio.
   var MOTIVOS_PERMISO = {
     matrimonio: { label:'Matrimonio o pareja de hecho', info:'Tienes derecho a 15 días naturales.', retribuido:true },
     hospitalizacionFamiliar: { label:'Accidente/enfermedad grave de familiar (con hospitalización)', info:'Tienes derecho a 5 días laborales desde el hecho causante, ampliables a 2 más si hay desplazamiento.', retribuido:true },
@@ -877,6 +949,13 @@
     huelga: { label:'Huelga', info:'No genera derecho a salario esos días — se descuenta del Salario Base y Comp. Personal.', retribuido:false },
     noRetribuido: { label:'Permiso sin sueldo', info:'No genera derecho a salario esos días — se descuenta del Salario Base y Comp. Personal.', retribuido:false }
   };
+  // Función central: calcula toda la información de un día concreto
+  // (tipo, tramos, horas trabajadas/exigidas/extra, y los datos propios
+  // de baja/permiso/médico si aplica). Si no hay una entrada guardada
+  // para ese día, se AUTOCOMPLETA como jornada normal con el horario por
+  // defecto (auto:true) — por eso no hace falta fichar cada día. Devuelve
+  // null si no hay jornada exigida ese día y tampoco hay entrada (fin de
+  // semana/festivo sin nada marcado).
   function diaInfo(iso){
     var entry = state.entries[iso];
     var teoricaBase = jornadaTeoricaDia(iso);
@@ -1323,6 +1402,9 @@
     });
     return count;
   }
+  // Saldo de vacaciones acumulado hasta un año: suma (asignados -
+  // disfrutados - compensados en dinero) de todos los años hasta ese,
+  // así que el saldo sin usar de un año se arrastra al siguiente.
   function vacSaldoAcumuladoHasta(year){
     var years = Object.keys(state.vacaciones.porAno).map(Number).filter(function(y){return y<=year;}).sort(function(a,b){return a-b;});
     if(years.length===0 || years[years.length-1]!==year) years.push(year);
@@ -1334,6 +1416,8 @@
     });
     return saldo;
   }
+  // Horas usadas en el año para "acompañar a familiar" (submotivo de
+  // médico), para compararlas contra el límite anual configurado.
   function acompanarHorasEnAno(year){
     var total=0;
     Object.keys(state.entries).forEach(function(iso){
@@ -1380,6 +1464,12 @@
     }
     return days;
   }
+  // Cuenta los sábados de un rango que cuentan para el Plus de
+  // Asistencia AUNQUE no se hayan fichado (Art. 52: cuenta L-Sáb aunque
+  // el sábado no se trabaje). Solo cuenta sábados SIN entrada propia,
+  // porque un sábado con entrada (trabajado, o marcado baja/festivo/
+  // permiso) ya lo cuenta o excluye el filtro normal de diasConPlus —
+  // contarlo aquí también sería duplicarlo.
   function sabadosConPlusEnRango(desde, hasta, proyectar){
     var end = proyectar ? hasta : (hasta < todayISO() ? hasta : todayISO());
     var count = 0;
@@ -1476,6 +1566,12 @@
   /* ================= NOMINA ================= */
   var extraMonth = monthKey(todayISO());
 
+  // Recorre el periodo 25→24 de un mes de nómina, día a día, sumando las
+  // horas extra ya redondeadas (hacia abajo, media hora) y su importe.
+  // Precio: entre semana un precio, sábado/domingo/festivo otro más alto
+  // (ver "precioHoraExtraSab" en Ajustes). "proyectar=true" recorre el
+  // mes completo aunque incluya días futuros (para la estimación del mes
+  // en curso); si no, se detiene en el día de hoy.
   function computeExtraForMonth(ym, proyectar){
     var range = extraPeriodRange(ym);
     var end = proyectar ? range[1] : (range[1] < todayISO() ? range[1] : todayISO());
@@ -1489,7 +1585,7 @@
         var horasRedondeadas = roundHalf(info.horasExtra);
         var dow = fromISO(cur).getDay();
         var cond = findCondForDate(cur);
-        var precio = dow===6 ? cond.precioHoraExtraSab : cond.precioHoraExtraLV;
+        var precio = (dow===6 || dow===0 || isFestivo(cur)) ? cond.precioHoraExtraSab : cond.precioHoraExtraLV;
         var importe = horasRedondeadas*precio;
         totalHorasExtra += horasRedondeadas;
         importeExtra += importe;
@@ -1511,10 +1607,23 @@
     document.getElementById('extra-month-label').textContent = monthLabel(extraMonth);
     var mrange = monthDaysRange(extraMonth);
     var cond = findCondForDate(mrange[1]);
+    // Si es el mes en curso, se proyecta hasta el final del mes asumiendo
+    // jornada normal en los días que aún no han pasado (salvo que estén
+    // marcados de otra forma) — así la nómina del mes en curso da una
+    // estimación completa, no solo de los días ya vividos.
     var esMesActual = extraMonth === monthKey(todayISO());
     var diasMes = diasDelMes(extraMonth, esMesActual);
+
+    // Días que cuentan para el Plus de Asistencia (mes natural, Art. 52):
+    // vacaciones, médico, permiso retribuido, días normales trabajados,
+    // y los sábados que ni se han fichado ni se han marcado de otra forma
+    // (cuentan igual aunque no se trabajen — ver sabadosConPlusEnRango).
     var diasConPlus = diasMes.filter(function(d){ return d.tipo==='vacaciones' || d.tipo==='medico' || (d.tipo==='permiso' && d.permisoRetribuido) || (d.tipo==='normal' && d.trabajadas>0); }).length;
     diasConPlus += sabadosConPlusEnRango(mrange[0], mrange[1], esMesActual);
+    // Versión "completa" del Plus de Asistencia (todos los días laborables
+    // + todos los sábados no festivos, SIN excluir baja/huelga) — es la
+    // que se usa en la fórmula de la prorrata, que no se reduce nunca por
+    // ausencias (ver nota de prorrataAuto más abajo).
     var diasConPlusCompleto = diasMes.filter(function(d){ return d.teoricaBase>0; }).length;
     (function(){
       var curS = mrange[0];
@@ -1526,6 +1635,10 @@
     var diasBaja = diasMes.filter(function(d){ return d.tipo==='baja'; });
     var diasNoRetribuidos = diasMes.filter(function(d){ return d.tipo==='permiso' && !d.permisoRetribuido; });
     var totalDiasMes = fromISO(mrange[1]).getDate();
+    // Días de baja o permiso sin sueldo reducen proporcionalmente el
+    // Salario Base y Comp. Personal de ese mes (verificado contra
+    // nóminas reales con huelga: 1930.97€ × (días_mes - días_baja) /
+    // días_mes reproduce el importe real casi exacto).
     var diasSinSueldo = diasBaja.length + diasNoRetribuidos.length;
     var factorPresencia = diasSinSueldo>0 ? Math.max(0, (totalDiasMes-diasSinSueldo)/totalDiasMes) : 1;
     var subsidioBaja = diasBaja.reduce(function(s,d){ return s+(d.bajaSubsidio||0); }, 0);
@@ -1540,10 +1653,24 @@
     var gratifVoluntaria = cond.gratifVoluntariaBase + extraInfo.importeExtra;
     var totalDevengado = salarioBase + compPersonal + plusAsistencia + gratifVoluntaria + subsidioBaja;
 
+    // Prorrata de pagas extra: (Salario Base + Comp. Personal + Plus de
+    // Asistencia) × 2 × días del mes ÷ 365. IMPORTANTE: usa el Salario
+    // Base y Comp. Personal COMPLETOS de la condición (cond.salarioBase/
+    // compPersonal, no las variables ya reducidas por baja/huelga de
+    // arriba) y el Plus de Asistencia "completo" (plusAsistenciaCompleta,
+    // no el reducido) — confirmado comparando nóminas reales: un mes con
+    // huelga y su mes equivalente sin huelga dieron la MISMA prorrata,
+    // así que la huelga no debe afectar a este cálculo en absoluto.
+    // Editable a mano en mesOverride si algún mes no cuadra exacto (el
+    // redondeo interno del programa de nóminas de la empresa no se puede
+    // reproducir al céntimo desde fuera).
     var prorrataAuto = Math.round(((cond.salarioBase + cond.compPersonal + plusAsistenciaCompleta) * 2 * totalDiasMes / 365)*100)/100;
     var prorrata = ov.prorrata!=null ? ov.prorrata : prorrataAuto;
     var irpfPct = ov.irpf!=null ? ov.irpf : cond.pctIRPF;
 
+    // BC Con Com = base de cotización = devengado + prorrata. Es la base
+    // sobre la que se calculan TANTO las deducciones del trabajador como
+    // las aportaciones de la empresa (verificado exacto contra nómina real).
     var bcConCom = totalDevengado + prorrata;
     var dContComunes = bcConCom * cond.pctContComunes/100;
     var dDesempleo = bcConCom * cond.pctDesempleo/100;
@@ -1551,6 +1678,10 @@
     var dIRPF = totalDevengado * irpfPct/100;
     var totalDeducido = dContComunes+dDesempleo+dFormProf+dIRPF;
     var liquido = totalDevengado - totalDeducido;
+    // Aportaciones de la empresa a la Seg. Social (no aparecen en la
+    // nómina del trabajador). IT + IMS son las dos partes en que se
+    // divide realmente el tipo de AT/EP. Tipos verificados contra la
+    // nómina real de agosto 2026 (Horta-Coslada C. Metálicas SL).
     var eContComunes = bcConCom * (cond.pctEmpContComunes||0)/100;
     var eIT = bcConCom * (cond.pctEmpIT||0)/100;
     var eIMS = bcConCom * (cond.pctEmpIMS||0)/100;
@@ -1837,7 +1968,7 @@
       '<div class="field-row"><label>Gratif. Voluntaria (base)</label><input class="cond-f" data-f="gratifVoluntariaBase" value="'+fmtEUR(cond.gratifVoluntariaBase)+'"></div>'+
       '<div class="cond-subhead">Horas extra</div>'+
       '<div class="field-row"><label>Precio hora L-V</label><input class="cond-f" data-f="precioHoraExtraLV" value="'+fmtEUR(cond.precioHoraExtraLV)+'"></div>'+
-      '<div class="field-row"><label>Precio hora sábado</label><input class="cond-f" data-f="precioHoraExtraSab" value="'+fmtEUR(cond.precioHoraExtraSab)+'"></div>'+
+      '<div class="field-row"><label>Precio hora sábado/domingo/festivo</label><input class="cond-f" data-f="precioHoraExtraSab" value="'+fmtEUR(cond.precioHoraExtraSab)+'"></div>'+
       '<div class="cond-subhead">Baja (IT)</div>'+
       '<div class="field-row"><label>Base reguladora (por día)</label><input class="cond-f" data-f="baseReguladoraDia" value="'+fmtEUR(cond.baseReguladoraDia)+'"></div>'+
       '<p class="field-hint" style="margin-top:-6px;">Normalmente tu base de cotización del mes anterior &divide; 30. Por defecto se estima con el Salario Base.</p>'+
